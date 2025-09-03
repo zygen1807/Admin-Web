@@ -1,0 +1,130 @@
+.location-container {
+  display: flex;
+  flex-direction: row;
+  height: 80vh;
+  width: 100%;
+  background-color: #fafafa;
+  font-family: Arial, sans-serif;
+}
+
+.map-wrapper {
+  flex: 2;
+  height: 100%;
+  position: relative;
+}
+
+.map {
+  height: 100%;
+  width: 100%;
+  border-right: 1px solid #ccc;
+}
+
+.card-list {
+  flex: 1;
+  padding: 10px;
+  overflow-y: auto;
+  background-color: #f9f9f9;
+  border-left: 1px solid #ccc;
+}
+
+.card {
+  background: white;
+  margin-bottom: 12px;
+  padding: 12px;
+  border-radius: 10px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  align-items: center;
+}
+
+.name {
+  font-weight: bold;
+  font-size: 1rem;
+}
+
+.address, .phone {
+  margin: 3px 0;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.btn-row {
+  margin-top: 8px;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.call-btn, .locate-btn {
+  flex: 1;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 6px;
+  background-color: #1976d2;
+  color: white;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background-color 0.15s ease;
+}
+
+.call-btn:hover, .locate-btn:hover {
+  background-color: #1258a8;
+}
+
+.risk-badge {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  color: white;
+  margin-left: 8px;
+}
+
+.risk-badge.normal {
+  background-color: green;
+}
+
+.risk-badge.risk {
+  background-color: orange;
+}
+
+.risk-badge.high-risk {
+  background-color: red;
+}
+
+/* Arrow Marker Styles */
+.leaflet-marker-icon.red-arrow {
+  filter: hue-rotate(0deg) saturate(5) brightness(1.2); /* red arrow */
+}
+
+.leaflet-marker-icon.blue-arrow {
+  filter: hue-rotate(200deg) saturate(5) brightness(1.2); /* blue arrow */
+}
+
+/* Mobile-friendly layout */
+@media (max-width: 768px) {
+  .location-container {
+    flex-direction: column;
+    height: auto;
+  }
+  .map-wrapper {
+    height: 50vh;
+  }
+  .card-list {
+    flex: unset;
+    height: auto;
+    border-left: none;
+    border-top: 1px solid #ccc;
+  }
+}

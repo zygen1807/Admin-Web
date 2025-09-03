@@ -1,0 +1,127 @@
+/* Fullscreen background only for login/signup */
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: url('/public/bg.jpg') no-repeat center center fixed;
+  background-size: cover;
+  font-family: 'Arial', sans-serif;
+}
+
+/* Login/Signup container (desktop style) */
+.auth-container {
+  max-width: 600px;   /* larger for desktop admin */
+  width: 100%;
+  margin: 40px auto;
+  padding: 60px 50px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.95); /* more solid for clarity */
+  border-radius: 20px;
+  box-shadow: 0px 15px 40px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(10px);
+  transition: transform 0.3s ease;
+}
+
+.auth-container:hover {
+  transform: translateY(-3px); /* subtle lift effect */
+}
+
+/* Logo */
+.logo {
+  width: 140px;
+  margin-bottom: 30px;
+  animation: fadeInDown 0.8s ease;
+}
+
+/* Input groups */
+.input-group {
+  margin-bottom: 22px;
+  text-align: left;
+}
+
+.input-group label {
+  font-weight: bold;
+  display: block;
+  margin-bottom: 6px;
+  color: #333;
+}
+
+.input-with-icon {
+  display: flex;
+  align-items: center;
+  border: 1px solid #ccc;
+  border-radius: 30px;
+  padding: 12px 18px;
+  background: #fff;
+  transition: all 0.3s ease;
+}
+
+.input-with-icon input {
+  flex: 1;
+  border: none;
+  outline: none;
+  padding-left: 12px;
+  font-size: 15px;
+  background: transparent;
+}
+
+.input-with-icon .material-icons {
+  color: #007e96;
+  font-size: 22px;
+}
+
+.input-with-icon:focus-within {
+  border-color: #00a7b3;
+  box-shadow: 0 0 8px rgba(0, 167, 179, 0.3);
+}
+
+/* Button */
+.auth-button {
+  background: linear-gradient(135deg, #00a7b3, #007e96);
+  color: white;
+  border: none;
+  padding: 14px 40px;
+  border-radius: 30px;
+  font-size: 17px;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0px 6px 14px rgba(0,0,0,0.2);
+  transition: transform 0.2s ease, background 0.3s ease;
+  margin-top: 10px;
+}
+
+.auth-button:hover {
+  background: linear-gradient(135deg, #007e96, #005f6b);
+  transform: translateY(-2px);
+}
+
+/* Footer */
+.footer-text {
+  margin-top: 25px;
+  font-size: 14px;
+  color: #444;
+}
+
+.link {
+  color: #007e96;
+  cursor: pointer;
+  font-weight: bold;
+  transition: color 0.3s ease;
+}
+
+.link:hover {
+  color: #00a7b3;
+}
+
+/* Logo animation */
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-25px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

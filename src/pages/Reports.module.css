@@ -1,0 +1,115 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1rem;
+}
+
+.card,
+.cardFull {
+  background: #ffffff;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.card {
+  flex: 1 1 45%;
+  min-width: 300px;
+}
+
+.cardFull h2 {
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.header h1 {
+  font-size: 1.75rem;
+  font-weight: 600;
+}
+
+.controlsWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.controls {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.dateRange {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.controls select {
+  padding: 0.5rem;
+  border-radius: 0.375rem;
+  border: 1px solid #ccc;
+}
+
+.generateBtn {
+  background-color: #10b981;
+  color: white;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.generateBtn:hover {
+  background-color: #059669;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.remark {
+  font-weight: 500;
+}
+
+.green {
+  color: #10b981;
+}
+
+.orange {
+  color: #f59e0b;
+}
+
+.red {
+  color: #ef4444;
+}
+
+.footer {
+  margin-top: 0.75rem;
+  color: #4b5563;
+  font-size: 0.9rem;
+  text-align: center;
+}
