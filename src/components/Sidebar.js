@@ -9,7 +9,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
 
 // ✅ import your custom logo
-import myLogo from '../logo_round.png'; 
+import myLogo from '../assets/logo_round.png'; // adjust path to your logo
 
 const db = getFirestore();
 
@@ -56,7 +56,7 @@ const Sidebar = () => {
       <div>
         {/* ✅ Changed from text to image logo */}
         <img src={myLogo} alt="Admin Midwife" className={styles.logo} />
-          <h1 className={styles.admin}>Admin Midwife</h1>
+          <h1 className={styles.admin}>Barangay Health Midwife</h1>
 
         <nav className={styles.nav}>
           <NavLink to="/app/dashboard" className={linkStyle} >
