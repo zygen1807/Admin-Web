@@ -9,7 +9,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
 
 // ✅ import your custom logo
-import myLogo from '../assets/logo_round1.png'; // adjust path to your logo
+import myLogo from '../../src/assets/logo_round1.png'; // adjust path to your logo
 
 const db = getFirestore();
 
