@@ -36,8 +36,10 @@ const Reports = () => {
   const [filter, setFilter] = useState('This Month');
   const [customStartDate, setCustomStartDate] = useState(null);
   const [customEndDate, setCustomEndDate] = useState(null);
-  const [monthlyUserCounts, setMonthlyUserCounts] = useState(Array(12).fill(0));
-  const [trimesterDistribution, setTrimesterDistribution] = useState({ first: 0, second: 0, third: 0 });
+
+  // NEW: filtered pregnant data for charts
+  const [filteredPregnantData, setFilteredPregnantData] = useState([]);
+  const [filteredTrimesterData, setFilteredTrimesterData] = useState({ first: 0, second: 0, third: 0 });
 
   const filterByDateRange = (activities, filter, startDate, endDate) => {
     const now = new Date();
@@ -105,46 +107,55 @@ const Reports = () => {
     fetchBhwActivity();
   }, [filter, customStartDate, customEndDate]);
 
+  // Update filtered pregnant data whenever filter changes
   useEffect(() => {
     const fetchPregnantData = async () => {
       try {
         const userSnap = await getDocs(collection(db, 'pregnant_users'));
         const trimesterSnap = await getDocs(collection(db, 'pregnant_trimester'));
 
-        const monthlyCounts = new Array(12).fill(0);
+        const filteredUsers = userSnap.docs
+          .map(doc => ({ id: doc.id, ...doc.data(), createdAt: doc.data().createdAt?.toDate?.() }))
+          .filter(user => {
+            if (!user.createdAt) return false;
+            const date = user.createdAt;
+            const now = new Date();
+            const currentMonth = now.getMonth();
+            const currentYear = now.getFullYear();
+            const lastMonthDate = new Date(currentYear, currentMonth - 1, 1);
+
+            if (filter === 'This Month') return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
+            if (filter === 'Last Month') return date.getMonth() === lastMonthDate.getMonth() && date.getFullYear() === lastMonthDate.getFullYear();
+            if (filter === 'Custom Range' && customStartDate && customEndDate) return date >= customStartDate && date <= customEndDate;
+            return true;
+          });
+
+        setFilteredPregnantData(filteredUsers);
+
+        // Compute trimester distribution for filtered users
         let trimesterCounts = { first: 0, second: 0, third: 0 };
-
-        userSnap.forEach((doc) => {
-          const createdAt = doc.data().createdAt?.toDate?.();
-          if (createdAt) {
-            const month = createdAt.getMonth();
-            monthlyCounts[month]++;
-          }
+        trimesterSnap.forEach(doc => {
+          const t = doc.data().trimester;
+          if (t === '1st Trimester') trimesterCounts.first++;
+          else if (t === '2nd Trimester') trimesterCounts.second++;
+          else if (t === '3rd Trimester') trimesterCounts.third++;
         });
 
-        trimesterSnap.forEach((doc) => {
-          const trimester = doc.data().trimester;
-          if (trimester === '1st Trimester') trimesterCounts.first++;
-          else if (trimester === '2nd Trimester') trimesterCounts.second++;
-          else if (trimester === '3rd Trimester') trimesterCounts.third++;
-        });
+        setFilteredTrimesterData(trimesterCounts);
 
-        setMonthlyUserCounts(monthlyCounts);
-        setTrimesterDistribution(trimesterCounts);
       } catch (err) {
         console.error('Fetch error:', err);
       }
     };
 
     fetchPregnantData();
-  }, []);
+  }, [filter, customStartDate, customEndDate]);
 
   const incrementReportCount = async () => {
     const countDocRef = doc(db, 'report_stats', 'generated');
     try {
       await setDoc(countDocRef, { count: increment(1) }, { merge: true });
     } catch (err) {
-      // If setDoc with increment fails (older SDK), fallback:
       const docSnap = await getDoc(countDocRef);
       if (docSnap.exists()) {
         await updateDoc(countDocRef, { count: docSnap.data().count + 1 });
@@ -195,16 +206,35 @@ const Reports = () => {
     await incrementReportCount();
   };
 
+  // Dynamic line and pie chart data
   const lineData = {
     labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
     datasets: [
       {
         label: 'Pregnant Users',
-        data: monthlyUserCounts,
+        data: filteredPregnantData.reduce((acc, user) => {
+          const month = user.createdAt?.getMonth() ?? 0;
+          acc[month] = (acc[month] || 0) + 1;
+          return acc;
+        }, new Array(12).fill(0)),
         borderColor: '#10b981',
         backgroundColor: '#10b981',
         tension: 0.3,
         fill: false,
+      },
+    ],
+  };
+
+  const pieData = {
+    labels: ['1st Trimester', '2nd Trimester', '3rd Trimester'],
+    datasets: [
+      {
+        data: [
+          filteredTrimesterData.first,
+          filteredTrimesterData.second,
+          filteredTrimesterData.third,
+        ],
+        backgroundColor: ['#93c5fd', '#bbf7d0', '#fca5a5'],
       },
     ],
   };
@@ -215,16 +245,10 @@ const Reports = () => {
     scales: {
       y: {
         beginAtZero: true,
-        title: {
-          display: true,
-          text: 'No. of Pregnant Users',
-        },
+        title: { display: true, text: 'No. of Pregnant Users' },
       },
       x: {
-        title: {
-          display: true,
-          text: 'Month',
-        },
+        title: { display: true, text: 'Month' },
       },
     },
     plugins: {
@@ -238,20 +262,6 @@ const Reports = () => {
         formatter: (value) => value,
       },
     },
-  };
-
-  const pieData = {
-    labels: ['1st Trimester', '2nd Trimester', '3rd Trimester'],
-    datasets: [
-      {
-        data: [
-          trimesterDistribution.first,
-          trimesterDistribution.second,
-          trimesterDistribution.third,
-        ],
-        backgroundColor: ['#93c5fd', '#bbf7d0', '#fca5a5'],
-      },
-    ],
   };
 
   const pieOptions = {
@@ -355,9 +365,9 @@ const Reports = () => {
 
         <div style={{ marginTop: '12px' }}>
           {[
-            { label: '1st Trimester', count: trimesterDistribution.first, color: '#93c5fd' },
-            { label: '2nd Trimester', count: trimesterDistribution.second, color: '#bbf7d0' },
-            { label: '3rd Trimester', count: trimesterDistribution.third, color: '#fca5a5' },
+            { label: '1st Trimester', count: filteredTrimesterData.first, color: '#93c5fd' },
+            { label: '2nd Trimester', count: filteredTrimesterData.second, color: '#bbf7d0' },
+            { label: '3rd Trimester', count: filteredTrimesterData.third, color: '#fca5a5' },
           ].map((item, index) => (
             <div key={index} style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}>
               <div style={{ width: 12, height: 12, backgroundColor: item.color, marginRight: 6 }} />

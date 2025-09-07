@@ -55,7 +55,7 @@ const Sidebar = () => {
     <aside className={styles.sidebar}>
       <div>
         {/* ✅ Changed from text to image logo */}
-        <img src={myLogo} alt="Admin Midwife" className={styles.logo} />
+        
           <h1 className={styles.admin}>Barangay Health Midwife</h1>
 
         <nav className={styles.nav}>
