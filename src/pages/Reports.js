@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { Line, Pie } from 'react-chartjs-2';
 import { collection, getDocs, doc, getDoc, setDoc, updateDoc, increment } from 'firebase/firestore';
 import { db } from '../firebase';
 import styles from './Reports.module.css';
@@ -8,38 +7,13 @@ import autoTable from 'jspdf-autotable';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 
-import ChartDataLabels from 'chartjs-plugin-datalabels';
-import {
-  Chart as ChartJS,
-  LineElement,
-  PointElement,
-  LinearScale,
-  CategoryScale,
-  ArcElement,
-  Tooltip,
-  Legend,
-} from 'chart.js';
-
-ChartJS.register(
-  LineElement,
-  PointElement,
-  LinearScale,
-  CategoryScale,
-  ArcElement,
-  Tooltip,
-  Legend,
-  ChartDataLabels
-);
-
 const Reports = () => {
   const [bhwData, setBhwData] = useState([]);
+  const [pregnantData, setPregnantData] = useState([]);
   const [filter, setFilter] = useState('This Month');
   const [customStartDate, setCustomStartDate] = useState(null);
   const [customEndDate, setCustomEndDate] = useState(null);
-
-  // NEW: filtered pregnant data for charts
-  const [filteredPregnantData, setFilteredPregnantData] = useState([]);
-  const [filteredTrimesterData, setFilteredTrimesterData] = useState({ first: 0, second: 0, third: 0 });
+  const [showPregnantRecords, setShowPregnantRecords] = useState({});
 
   const filterByDateRange = (activities, filter, startDate, endDate) => {
     const now = new Date();
@@ -104,50 +78,30 @@ const Reports = () => {
       }
     };
 
-    fetchBhwActivity();
-  }, [filter, customStartDate, customEndDate]);
-
-  // Update filtered pregnant data whenever filter changes
-  useEffect(() => {
     const fetchPregnantData = async () => {
-      try {
-        const userSnap = await getDocs(collection(db, 'pregnant_users'));
-        const trimesterSnap = await getDocs(collection(db, 'pregnant_trimester'));
+  try {
+    const snapshot = await getDocs(collection(db, 'checkup_record'));
+    const data = await Promise.all(
+      snapshot.docs.map(async (docItem) => {
+        const recsSnap = await getDocs(collection(db, 'checkup_record', docItem.id, 'records'));
+        const records = recsSnap.docs.map((r) => ({ id: r.id, ...r.data() }));
+        const docData = docItem.data();
+        return {
+          id: docItem.id,
+          name: docData.patientName || 'N/A', // ✅ use patientName
+          address: docData.address || 'N/A',
+          riskAssessment: docData.riskAssessment || 'N/A',
+          records,
+        };
+      })
+    );
+    setPregnantData(data);
+  } catch (err) {
+    console.error('Error fetching pregnant checkup records:', err);
+  }
+};
 
-        const filteredUsers = userSnap.docs
-          .map(doc => ({ id: doc.id, ...doc.data(), createdAt: doc.data().createdAt?.toDate?.() }))
-          .filter(user => {
-            if (!user.createdAt) return false;
-            const date = user.createdAt;
-            const now = new Date();
-            const currentMonth = now.getMonth();
-            const currentYear = now.getFullYear();
-            const lastMonthDate = new Date(currentYear, currentMonth - 1, 1);
-
-            if (filter === 'This Month') return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
-            if (filter === 'Last Month') return date.getMonth() === lastMonthDate.getMonth() && date.getFullYear() === lastMonthDate.getFullYear();
-            if (filter === 'Custom Range' && customStartDate && customEndDate) return date >= customStartDate && date <= customEndDate;
-            return true;
-          });
-
-        setFilteredPregnantData(filteredUsers);
-
-        // Compute trimester distribution for filtered users
-        let trimesterCounts = { first: 0, second: 0, third: 0 };
-        trimesterSnap.forEach(doc => {
-          const t = doc.data().trimester;
-          if (t === '1st Trimester') trimesterCounts.first++;
-          else if (t === '2nd Trimester') trimesterCounts.second++;
-          else if (t === '3rd Trimester') trimesterCounts.third++;
-        });
-
-        setFilteredTrimesterData(trimesterCounts);
-
-      } catch (err) {
-        console.error('Fetch error:', err);
-      }
-    };
-
+    fetchBhwActivity();
     fetchPregnantData();
   }, [filter, customStartDate, customEndDate]);
 
@@ -206,85 +160,15 @@ const Reports = () => {
     await incrementReportCount();
   };
 
-  // Dynamic line and pie chart data
-  const lineData = {
-    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-    datasets: [
-      {
-        label: 'Pregnant Users',
-        data: filteredPregnantData.reduce((acc, user) => {
-          const month = user.createdAt?.getMonth() ?? 0;
-          acc[month] = (acc[month] || 0) + 1;
-          return acc;
-        }, new Array(12).fill(0)),
-        borderColor: '#10b981',
-        backgroundColor: '#10b981',
-        tension: 0.3,
-        fill: false,
-      },
-    ],
-  };
-
-  const pieData = {
-    labels: ['1st Trimester', '2nd Trimester', '3rd Trimester'],
-    datasets: [
-      {
-        data: [
-          filteredTrimesterData.first,
-          filteredTrimesterData.second,
-          filteredTrimesterData.third,
-        ],
-        backgroundColor: ['#93c5fd', '#bbf7d0', '#fca5a5'],
-      },
-    ],
-  };
-
-  const lineOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    scales: {
-      y: {
-        beginAtZero: true,
-        title: { display: true, text: 'No. of Pregnant Users' },
-      },
-      x: {
-        title: { display: true, text: 'Month' },
-      },
-    },
-    plugins: {
-      legend: { position: 'top' },
-      tooltip: { mode: 'index', intersect: false },
-      datalabels: {
-        anchor: 'end',
-        align: 'top',
-        color: '#111827',
-        font: { weight: 'bold' },
-        formatter: (value) => value,
-      },
-    },
-  };
-
-  const pieOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-      datalabels: {
-        color: '#000',
-        font: { weight: 'bold' },
-        formatter: (value, context) => {
-          const total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
-          return total > 0 ? `${((value / total) * 100).toFixed(1)}%` : '0%';
-        },
-      },
-    },
+  const togglePregnantDropdown = (id) => {
+    setShowPregnantRecords((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
   return (
     <div className={styles.container}>
       <div className={styles.cardFull}>
         <div className={styles.header}>
-          <h1>Reports and Analytics</h1>
+          <h1>Generate Reports</h1>
           <div className={styles.controlsWrapper}>
             <div className={styles.controls}>
               <select value={filter} onChange={(e) => setFilter(e.target.value)}>
@@ -347,34 +231,51 @@ const Reports = () => {
             ))}
           </tbody>
         </table>
-      </div>
 
-      <div className={styles.card}>
-        <h2>Pregnant Users by Month</h2>
-        <div style={{ height: '300px' }}>
-          <Line data={lineData} options={lineOptions} />
-        </div>
-        <p className={styles.footer}>Monthly Breakdown of Registered Pregnant Users</p>
-      </div>
-
-      <div className={styles.card}>
-        <h2>Trimester Distribution</h2>
-        <div style={{ width: '300px', height: '300px', margin: '0 auto' }}>
-          <Pie data={pieData} options={pieOptions} />
-        </div>
-
-        <div style={{ marginTop: '12px' }}>
-          {[
-            { label: '1st Trimester', count: filteredTrimesterData.first, color: '#93c5fd' },
-            { label: '2nd Trimester', count: filteredTrimesterData.second, color: '#bbf7d0' },
-            { label: '3rd Trimester', count: filteredTrimesterData.third, color: '#fca5a5' },
-          ].map((item, index) => (
-            <div key={index} style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}>
-              <div style={{ width: 12, height: 12, backgroundColor: item.color, marginRight: 6 }} />
-              <span style={{ fontSize: 13 }}>{item.label} — {item.count} Pregnant Women</span>
-            </div>
-          ))}
-        </div>
+        <h2>Pregnant Checkup Records</h2>
+        <table className={styles.table}>
+          <thead>
+            <tr>
+              <th>No.</th>
+              <th>Patient Name</th>
+              <th>Risk Assessment</th>
+              <th>Other Records</th>
+            </tr>
+          </thead>
+          <tbody>
+            {pregnantData.map((preg, index) => (
+              <React.Fragment key={preg.id}>
+                <tr>
+                  <td>{index + 1}</td>
+                  <td>{preg.name}</td>
+                  <td>{preg.riskAssessment}</td>
+                  <td>
+                    <button
+                      style={{ backgroundColor: 'green', color: '#fff', border: 'none', padding: '4px 8px', cursor: 'pointer' }}
+                      onClick={() => togglePregnantDropdown(preg.id)}
+                    >
+                      {showPregnantRecords[preg.id] ? 'Hide Records ⬆' : 'Show Records ⬇'}
+                    </button>
+                  </td>
+                </tr>
+                {showPregnantRecords[preg.id] &&
+                  preg.records.map((r) => (
+                    <tr key={r.id} style={{ backgroundColor: '#f5f5f5' }}>
+                      <td colSpan={5}>
+                        {Object.entries(r).map(([k, v]) =>
+                          k === 'id' ? null : (
+                            <div key={k}>
+                              <strong>{k}:</strong> {v?.toString() || 'N/A'}
+                            </div>
+                          )
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+              </React.Fragment>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );

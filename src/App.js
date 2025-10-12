@@ -10,6 +10,7 @@ import Reports from './pages/Reports';
 import Users from './pages/Users';
 import Settings from './pages/Settings';
 import LocationMap from './pages/LocationMap';
+import AdminPendingUsers from './pages/AdminPendingUsers';
 
 
 function App() {
@@ -26,7 +27,8 @@ function App() {
           <Route index element={<Dashboard />} />               {/* /app */}
           <Route path="dashboard" element={<Dashboard />} />    {/* /app/dashboard */}
           <Route path="reports" element={<Reports />} />  
-          <Route path="LocationMap" element={<LocationMap />} />  
+          <Route path="LocationMap" element={<LocationMap />} /> 
+          <Route path="AdminPendingUsers" element={<AdminPendingUsers />} /> {/* /app/AdminPendingUsers */} 
           <Route path="users" element={<Users />} />            {/* /app/users */}
           <Route path="settings" element={<Settings />} />      {/* /app/settings */}
         </Route>

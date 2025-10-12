@@ -1,108 +1,107 @@
 .sidebar {
-  width: 16rem;
-  background-color: #047857; /* emerald-700 */
-  color: #ffffff;
-  height: 100vh; /* full screen height */
-  overflow-y: auto; /* enable scroll */
+  background: #ffffff;
+  color: #111827;
+  height: 100%;
+  width: 60px;
+  transition: width 0.3s ease;
+  position: fixed;
+  top: 50px;
+  left: 0;
   display: flex;
   flex-direction: column;
-  padding: 1.5rem;
-  box-sizing: border-box;
+  padding-top: 20px;
+  border-right: 1px solid #ddd;
+  overflow: hidden;
+  z-index: 101;
 }
 
-.admin {
-  font-size: 1.75rem;
-  font-weight: bold;
-  margin-bottom: 2rem;
-  color: #ffffff;
-  text-align: center;
+.sidebar.open {
+  width: 220px;
+}
+
+.logoContainer {
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
 }
 
 .logo {
-  font-size: 1.75rem;
+  height: 30px;
+  width: 30px;
+}
+
+.admin {
+  font-size: 14px;
   font-weight: bold;
-  margin-bottom: 2rem;
-  color: #ffffff;
-  width: 100px;     /* adjust as needed */
-  height: auto;     /* keeps aspect ratio */
-  display: block;  
-  margin: 0 auto;  
+  margin-left: 10px;
 }
 
 .nav {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  margin-top: 20px;
 }
 
 .link {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.5rem 1rem;
-  border-radius: 0.5rem;
-  color: #d1fae5; /* emerald-100 */
+  padding: 12px 16px;
+  color: #111827;
   text-decoration: none;
-  transition: background 0.2s;
+  font-size: 14px;
 }
 
 .link:hover {
-  background-color: #059669; /* emerald-600 */
+  background: rgba(59, 130, 246, 0.1);
 }
 
 .active {
-  background-color: #065f46; /* emerald-800 */
-  font-weight: 600;
-  color: #ffffff;
+  background: rgba(59, 130, 246, 0.2);
+}
+
+.icon {
+  font-size: 20px;
+}
+
+.label {
+  margin-left: 16px;
+  white-space: nowrap;
 }
 
 .profile {
-  background-color: #065f46;
-  padding: 1rem;
-  border-radius: 0.5rem;
+  margin-top: auto;
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  margin-top: 10px; /* Push to bottom */
+  align-items: center;
 }
 
 .avatar {
-  background-color: #059669;
-  color: #ffffff;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 40px;
+  height: 40px;
+  background: #3b82f6;
+  color: white;
+  border-radius: 50%;
   display: flex;
-  align-items: center;
   justify-content: center;
-  border-radius: 9999px;
+  align-items: center;
   font-weight: bold;
 }
 
-.profileText p:first-child {
-  font-weight: 600;
+.profileText {
+  margin-top: 8px;
+  text-align: center;
 }
 
-.profileText p:last-child {
-  font-size: 0.875rem;
-  color: #bbf7d0;
-}
-
-/* ✅ Logout Button */
 .logoutButton {
-  margin-top: 0.5rem;
-  background-color: #dc2626; /* red-600 */
-  color: white;
+  margin-top: 12px;
+  padding: 8px 12px;
   border: none;
-  padding: 0.5rem 0.75rem;
-  border-radius: 6px;
+  background: #ef4444;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
   display: flex;
   align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font-size: 0.875rem;
-  transition: background 0.2s;
-}
-
-.logoutButton:hover {
-  background-color: #b91c1c; /* red-700 */
+  gap: 6px;
 }

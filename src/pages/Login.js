@@ -18,6 +18,12 @@ function Login() {
     }
   };
 
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      handleLogin();
+    }
+  };
+
   return (
     <div className="auth-page">
       <div className="auth-container">
@@ -33,6 +39,7 @@ function Login() {
               value={email} 
               onChange={(e) => setEmail(e.target.value)} 
               placeholder="example@gmail.com" 
+              onKeyDown={handleKeyDown}
             />
           </div>
         </div>
@@ -46,6 +53,7 @@ function Login() {
               value={password} 
               onChange={(e) => setPassword(e.target.value)} 
               placeholder="********" 
+              onKeyDown={handleKeyDown}
             />
           </div>
         </div>
