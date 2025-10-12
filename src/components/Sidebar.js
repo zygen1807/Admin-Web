@@ -52,7 +52,7 @@ const Sidebar = ({ open }) => {
   return (
     <aside className={`${styles.sidebar} ${open ? styles.open : ""}`}>
       <div className={styles.logoContainer}>
-        <img src={myLogo} alt="Logo" className={styles.logo} />
+        {/*<img src={myLogo} alt="Logo" className={styles.logo} />*/}
         {open && <h1 className={styles.admin}>Barangay Health Midwife</h1>}
       </div>
 
