@@ -24,6 +24,13 @@
   font-size: 1.2rem;
   font-weight: 600;
 }
+/* Force header color for all tables in Reports */
+.table thead th {
+  background-color: #6e6c6c !important;
+  color: white !important;
+  text-align: center;
+}
+
 
 .header {
   display: flex;

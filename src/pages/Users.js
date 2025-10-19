@@ -10,6 +10,7 @@ import {
   addDoc,
   query,
   orderBy,
+  setDoc
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { createUserWithEmailAndPassword } from "firebase/auth";
@@ -137,23 +138,58 @@ const User = () => {
   };
 
   const handleSave = async () => {
-    if (!firstName || !lastName || !contact) {
-      alert("Please fill in all required fields.");
-      return;
-    }
+  if (!firstName || !lastName || !contact) {
+    alert("Please fill in all required fields.");
+    return;
+  }
 
-    const fullName = `${firstName} ${middleName} ${lastName}`.trim();
-   const autoPassword = birthDate
-  ? (() => {
-      const [year, month, day] = birthDate.split("-"); // "YYYY", "MM", "DD"
-      return `${month}${day}${year}`; // MMDDYYYY
-    })()
-  : "default123";
-    try {
-      if (selectedUser) {
-        // Update existing user
-        const userRef = doc(db, selectedUser.collection, selectedUser.id);
-        await updateDoc(userRef, {
+  const fullName = `${firstName} ${middleName} ${lastName}`.trim();
+  const autoPassword = birthDate
+    ? (() => {
+        const [year, month, day] = birthDate.split("-"); // "YYYY", "MM", "DD"
+        return `${month}${day}${year}`; // MMDDYYYY
+      })()
+    : "default123";
+
+  try {
+    if (selectedUser) {
+      // Update existing user
+      const userRef = doc(db, selectedUser.collection, selectedUser.id);
+      await updateDoc(userRef, {
+        name: fullName,
+        phone: contact,
+        email,
+        age,
+        address,
+        lmp,
+        birthDate,
+      });
+      alert("User updated.");
+    } else {
+      const confirmCreate = window.confirm(
+        `Are you sure you want to create an account for ${fullName}?`
+      );
+      if (!confirmCreate) return;
+
+      if (userType === "Pregnant Women") {
+        if (!email) {
+          alert("Please enter an Email address.");
+          return;
+        }
+
+        // 🔹 Create Firebase Auth user
+        const userCredential = await createUserWithEmailAndPassword(
+          auth,
+          email,
+          autoPassword
+        );
+
+        const patientId = userCredential.user.uid;
+
+        // 🔹 Create document with same ID as patientId
+        const pregnantRef = doc(db, "pregnant_users", patientId);
+        await setDoc(pregnantRef, {
+          patientId: patientId,
           name: fullName,
           phone: contact,
           email,
@@ -161,105 +197,84 @@ const User = () => {
           address,
           lmp,
           birthDate,
+          userType: "Pregnant",
+          createdAt: new Date(),
+          approved: true,
         });
-        alert("User updated.");
-      } else {
-        const confirmCreate = window.confirm(
-          `Are you sure you want to create an account for ${fullName}?`
-        );
-        if (!confirmCreate) return;
 
-        if (userType === "Pregnant Women") {
-          if (!email) {
-            alert("Please enter an Email address.");
-            return;
-          }
-
-          const userCredential = await createUserWithEmailAndPassword(
-            auth,
-            email,
-            autoPassword
-          );
-
-          await addDoc(collection(db, "pregnant_users"), {
-            patientId: userCredential.user.uid,
-            name: fullName,
-            phone: contact,
-            email,
-            age,
-            address,
-            lmp,
-            birthDate,
-            userType: "Pregnant",
-            createdAt: new Date(),
-            approved: true,
-          });
-
-          alert(`Pregnant user account created!\nDefault Password: ${autoPassword}`);
-        }
-
-        // ✅ NEW: Create BHW
-        else if (userType === "BHW") {
-          if (!email) {
-            alert("Please enter an Email address.");
-            return;
-          }
-
-          const userCredential = await createUserWithEmailAndPassword(
-            auth,
-            email,
-            autoPassword
-          );
-
-          await addDoc(collection(db, "bhw_users"), {
-            bhwId: userCredential.user.uid,
-            name: fullName,
-            phone: contact,
-            email,
-            address,
-            birthDate,
-            userType: "BHW",
-            createdAt: new Date(),
-          });
-
-          alert(`BHW account created!\nDefault Password: ${autoPassword}`);
-        }
-
-        // ✅ NEW: Create Barangay Rescuer
-        else if (userType === "Barangay Rescuer") {
-          if (!email) {
-            alert("Please enter an Email address.");
-            return;
-          }
-
-          const userCredential = await createUserWithEmailAndPassword(
-            auth,
-            email,
-            autoPassword
-          );
-
-          await addDoc(collection(db, "rescuer_users"), {
-            rescuerId: userCredential.user.uid,
-            name: fullName,
-            phone: contact,
-            email,
-            address,
-            birthDate,
-            userType: "Barangay Rescuer",
-            createdAt: new Date(),
-          });
-
-          alert(`Barangay Rescuer account created!\nDefault Password: ${autoPassword}`);
-        }
+        alert(`Pregnant user account created!\nDefault Password: ${autoPassword}`);
       }
 
-      setShowModal(false);
-      fetchUsers();
-    } catch (error) {
-      console.error("Save Error:", error);
-      alert("Failed to save user: " + error.message);
+      // ✅ NEW: Create BHW
+      else if (userType === "BHW") {
+        if (!email) {
+          alert("Please enter an Email address.");
+          return;
+        }
+
+        const userCredential = await createUserWithEmailAndPassword(
+          auth,
+          email,
+          autoPassword
+        );
+
+        const bhwId = userCredential.user.uid;
+
+        // 🔹 Create document with same ID as bhwId
+        const bhwRef = doc(db, "bhw_users", bhwId);
+        await setDoc(bhwRef, {
+          bhwId,
+          name: fullName,
+          phone: contact,
+          email,
+          address,
+          birthDate,
+          userType: "BHW",
+          createdAt: new Date(),
+        });
+
+        alert(`BHW account created!\nDefault Password: ${autoPassword}`);
+      }
+
+      // ✅ NEW: Create Barangay Rescuer
+      else if (userType === "Barangay Rescuer") {
+        if (!email) {
+          alert("Please enter an Email address.");
+          return;
+        }
+
+        const userCredential = await createUserWithEmailAndPassword(
+          auth,
+          email,
+          autoPassword
+        );
+
+        const rescuerId = userCredential.user.uid;
+
+        // 🔹 Create document with same ID as rescuerId
+        const rescuerRef = doc(db, "rescuer_users", rescuerId);
+        await setDoc(rescuerRef, {
+          rescuerId,
+          name: fullName,
+          phone: contact,
+          email,
+          address,
+          birthDate,
+          userType: "Barangay Rescuer",
+          createdAt: new Date(),
+        });
+
+        alert(`Barangay Rescuer account created!\nDefault Password: ${autoPassword}`);
+      }
     }
-  };
+
+    setShowModal(false);
+    fetchUsers();
+  } catch (error) {
+    console.error("Save Error:", error);
+    alert("Failed to save user: " + error.message);
+  }
+};
 
   // Open checkup records modal for a user
  const handleOpenCheckup = async (user) => {
@@ -605,7 +620,7 @@ const toggleDropdown = (e) => {
 
           </div>
         </div>
-      )}
+          )}
 
       {/* Checkup Records Modal (landscape-like display) */}
      {showCheckupModal && (

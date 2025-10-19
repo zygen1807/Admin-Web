@@ -48,6 +48,7 @@ const Layout = () => {
     else if (path.includes("AdminPendingUsers")) setPageTitle("AdminPendingUsers");
     else if (path.includes("users")) setPageTitle("User Management");
     else if (path.includes("settings")) setPageTitle("Account Settings");
+    else if (path.includes("LandingPage")) setPageTitle("LandingPage");
     else setPageTitle("Dashboard");
   }, [location]);
 
