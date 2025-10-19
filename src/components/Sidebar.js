@@ -12,7 +12,7 @@ import styles from "./Sidebar.module.css";
 import { auth } from "../firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { getFirestore, doc, getDoc, collection, onSnapshot, query, orderBy, limit } from "firebase/firestore";
-import myLogo from "./logo_round1.png";
+
 
 const db = getFirestore();
 
@@ -76,7 +76,7 @@ const Sidebar = ({ open }) => {
       {/* Sidebar */}
       <aside className={`${styles.sidebar} ${open ? styles.open : ""}`}>
         <div className={styles.logoContainer}>
-          {/* <img src={myLogo} alt="Logo" className={styles.logo} /> */}
+        <img src="/logo_512.png" alt="Logo" className={styles.logo} /> 
           {open && <h1 className={styles.admin}>Barangay Health Midwife</h1>}
         </div>
 
