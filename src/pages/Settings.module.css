@@ -1,5 +1,20 @@
 .container {
+     padding: 2rem;
+  background-color: #007e96;
+  min-height: 100vh;
+  font-family: "Poppins", sans-serif;
+  margin-top: -10px;
+  border-radius: 10px;
+  margin-left: -10px;
+  margin-right: -20px;
+}
+
+.card,
+.cardFull {
+  background: #c9e0e4;
+  border-radius: 0.75rem;
   padding: 1.5rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
 h1 {

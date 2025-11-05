@@ -93,17 +93,12 @@ const Sidebar = ({ open }) => {
 
           <NavLink to="/app/AssignPregnantBhw" className={linkStyle}>
             <FaUserPlus className={styles.icon} />
-            {open && <span className={styles.label}>Assign Pregnant (BHW)</span>}
+            {open && <span className={styles.label}>Assign Pregnant</span>}
           </NavLink>
 
           <NavLink to="/app/users" className={linkStyle}>
             <FaUsers className={styles.icon} />
             {open && <span className={styles.label}>User Management</span>}
-          </NavLink>
-
-          <NavLink to="/app/AdminNotifications" className={linkStyle}>
-            <FaBell className={styles.icon} />
-            {open && <span className={styles.label}>Notifications</span>}
           </NavLink>
 
           <NavLink to="/app/settings" className={linkStyle}>
@@ -123,10 +118,7 @@ const Sidebar = ({ open }) => {
             </p>
             <button
               className={styles.modalButton}
-              onClick={() => {
-                setShowModal(false);
-                navigate("/app/AdminNotifications");
-              }}
+              onClick={() => setShowModal(false)}
             >
               OK
             </button>

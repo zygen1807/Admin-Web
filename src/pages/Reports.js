@@ -1,5 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { collection, getDocs, doc, getDoc, setDoc, updateDoc, increment } from 'firebase/firestore';
+import {
+  collection,
+  getDocs,
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  increment,
+} from 'firebase/firestore';
 import { db } from '../firebase';
 import styles from './Reports.module.css';
 import jsPDF from 'jspdf';
@@ -13,7 +21,9 @@ const Reports = () => {
   const [filter, setFilter] = useState('This Month');
   const [customStartDate, setCustomStartDate] = useState(null);
   const [customEndDate, setCustomEndDate] = useState(null);
-  const [showPregnantRecords, setShowPregnantRecords] = useState({});
+  const [showModal, setShowModal] = useState(false);
+  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [checkupRecords, setCheckupRecords] = useState([]);
 
   const filterByDateRange = (activities, filter, startDate, endDate) => {
     const now = new Date();
@@ -39,6 +49,17 @@ const Reports = () => {
       }
 
       return true;
+    });
+  };
+
+  const formatDate = (date) => {
+    if (!date) return 'N/A';
+    const d = date instanceof Date ? date : new Date(date);
+    if (isNaN(d.getTime())) return 'N/A';
+    return d.toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
     });
   };
 
@@ -71,7 +92,12 @@ const Reports = () => {
           };
         });
 
-        const filtered = filterByDateRange(allActivities, filter, customStartDate, customEndDate);
+        const filtered = filterByDateRange(
+          allActivities,
+          filter,
+          customStartDate,
+          customEndDate
+        );
         setBhwData(filtered);
       } catch (error) {
         console.error('Error fetching BHW activity:', error);
@@ -79,27 +105,38 @@ const Reports = () => {
     };
 
     const fetchPregnantData = async () => {
-  try {
-    const snapshot = await getDocs(collection(db, 'checkup_record'));
-    const data = await Promise.all(
-      snapshot.docs.map(async (docItem) => {
-        const recsSnap = await getDocs(collection(db, 'checkup_record', docItem.id, 'records'));
-        const records = recsSnap.docs.map((r) => ({ id: r.id, ...r.data() }));
-        const docData = docItem.data();
-        return {
-          id: docItem.id,
-          name: docData.patientName || 'N/A', // ✅ use patientName
-          address: docData.address || 'N/A',
-          riskAssessment: docData.riskAssessment || 'N/A',
-          records,
-        };
-      })
-    );
-    setPregnantData(data);
-  } catch (err) {
-    console.error('Error fetching pregnant checkup records:', err);
-  }
-};
+      try {
+        const usersSnap = await getDocs(collection(db, 'pregnant_users'));
+        const trimesterSnap = await getDocs(collection(db, 'pregnant_trimester'));
+
+        const usersMap = {};
+        usersSnap.forEach((u) => {
+          usersMap[u.id] = { id: u.id, ...u.data() };
+        });
+
+        const combinedData = trimesterSnap.docs.map((doc) => {
+          const trimesterData = doc.data();
+          const userInfo = usersMap[trimesterData.patientId] || {};
+
+          return {
+            id: doc.id,
+            patientId: trimesterData.patientId,
+            patientName: userInfo.name || '',
+            lmp: formatDate(trimesterData.lmp),
+            edc: formatDate(trimesterData.edc),
+            bmi: trimesterData.bmi || '',
+            address: userInfo.address || '',
+            birthdate: formatDate(userInfo.birthDate),
+            age: userInfo.age || '',
+            phoneNumber: userInfo.phone || '',
+          };
+        });
+
+        setPregnantData(combinedData);
+      } catch (err) {
+        console.error('Error fetching pregnant data:', err);
+      }
+    };
 
     fetchBhwActivity();
     fetchPregnantData();
@@ -139,7 +176,18 @@ const Reports = () => {
 
     autoTable(doc, {
       startY: 40,
-      head: [['No.', 'Name', 'Address', 'Duties', 'Task', 'Pregnancy\nTracking', 'Total', 'Remarks']],
+      head: [
+        [
+          'No.',
+          'Name',
+          'Address',
+          'Duties',
+          'Task',
+          'Pregnancy\nTracking',
+          'Total',
+          'Remarks',
+        ],
+      ],
       body: tableData,
       styles: { fontSize: 9, cellPadding: 2 },
       headStyles: { fillColor: [41, 128, 185], halign: 'center' },
@@ -147,21 +195,104 @@ const Reports = () => {
       theme: 'grid',
     });
 
-    const finalY = doc.lastAutoTable.finalY + 20;
-    doc.setFontSize(10);
-    doc.text('CHERRY ANN M. BALMES, RM', 20, finalY);
-    doc.text('JENLYN F. LOMOCSO, MD', 90, finalY);
-    doc.text('EMELYN M. GABAO', 160, finalY);
-    doc.text('Rural Health Midwife', 20, finalY + 5);
-    doc.text('Municipal Health Officer', 90, finalY + 5);
-    doc.text('BHW Coordinator', 160, finalY + 5);
-
-    doc.save(`bhw_activity_report_${filter.replace(" ", "_").toLowerCase()}_2025.pdf`);
+    doc.save(`bhw_activity_report_${filter.replace(' ', '_').toLowerCase()}_2025.pdf`);
     await incrementReportCount();
   };
 
-  const togglePregnantDropdown = (id) => {
-    setShowPregnantRecords((prev) => ({ ...prev, [id]: !prev[id] }));
+  const openCheckupModal = async (preg) => {
+    setSelectedPatient(preg);
+    setShowModal(true);
+
+    try {
+      const recSnap = await getDocs(
+        collection(db, 'checkup_record', preg.patientId, 'records')
+      );
+      const recData = recSnap.docs
+        .map((d) => {
+          const data = d.data();
+          return {
+            date: formatDate(data.date),
+            BP: data.bloodPressure || '—',
+            HT: data.height || '—',
+            WT: data.weight || '—',
+            MUAC: data.muac || '—',
+            GP: data.examination || '—',
+            TEMPERATURE: data.temperature || '—',
+            FH: data.fh || '—',
+            PRESENTATION: data.presentation || '—',
+            FHT: data.fht || '—',
+            'TT GIVEN': data.ttGiven || '—',
+            EOG: data.eog || '—',
+            FESO4FA: data.feso4fa || '—',
+            'CALCIUM CARB': data.calciumCarb || '—',
+            'RISK FACTOR': data.riskAssessment || '—',
+            LABORATORIES: data.laboratories || '—',
+            DONE: data.done || '—',
+            RPR: data.rpr || '—',
+            HBSAG: data.hbsag || '—',
+            CBC: data.cbc || '—',
+            'BLOOD SUGAR': data.bloodSugar || '—',
+            'HIV SCREENING': data.hivScreening || '—',
+            URINALYSIS: data.urinalysis || '—',
+          };
+        })
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+      setCheckupRecords(recData);
+    } catch (err) {
+      console.error('Error fetching checkup records:', err);
+      setCheckupRecords([]);
+    }
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setSelectedPatient(null);
+    setCheckupRecords([]);
+  };
+
+  // ✅ Generate Checkup Record PDF (landscape like image)
+  const handleGeneratePatientPdf = () => {
+    if (!selectedPatient || checkupRecords.length === 0) return;
+
+    const doc = new jsPDF();
+    doc.setFontSize(12);
+   doc.setFontSize(14);
+doc.text('Prenatal Checkup Record', doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
+
+    doc.setFontSize(10);
+    let y = 25;
+    const info = [
+      ['NAME:', selectedPatient.patientName || ''],
+      ['ADDRESS:', selectedPatient.address || ''],
+      ['BIRTHDAY:', selectedPatient.birthdate || ''],
+      ['AGE:', selectedPatient.age || ''],
+      ['CP NO:', selectedPatient.phoneNumber || ''],
+      ['LMP:', selectedPatient.lmp || ''],
+      ['EDC:', selectedPatient.edc || ''],
+      ['BMI:', selectedPatient.bmi || '']
+    ];
+    info.forEach(([label, value]) => {
+      doc.text(`${label}`, 14, y);
+      doc.text(`${value}`, 45, y);
+      y += 6;
+    });
+
+    const headers = ['Date', ...checkupRecords.map(r => r.date)];
+    const fields = Object.keys(checkupRecords[0] || {}).filter(f => f !== 'date');
+    const body = fields.map(f => [f, ...checkupRecords.map(r => r[f] || '—')]);
+
+    autoTable(doc, {
+      startY: y + 4,
+      head: [headers],
+      body,
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [41, 128, 185], halign: 'center' },
+      bodyStyles: { halign: 'center' },
+      theme: 'grid',
+    });
+
+    doc.save(`${selectedPatient.patientName.replace(/\s+/g, '_')}_checkup_record.pdf`);
   };
 
   return (
@@ -183,8 +314,16 @@ const Reports = () => {
 
             {filter === 'Custom Range' && (
               <div className={styles.dateRange}>
-                <DatePicker selected={customStartDate} onChange={setCustomStartDate} placeholderText="Start Date" />
-                <DatePicker selected={customEndDate} onChange={setCustomEndDate} placeholderText="End Date" />
+                <DatePicker
+                  selected={customStartDate}
+                  onChange={setCustomStartDate}
+                  placeholderText="Start Date"
+                />
+                <DatePicker
+                  selected={customEndDate}
+                  onChange={setCustomEndDate}
+                  placeholderText="End Date"
+                />
               </div>
             )}
           </div>
@@ -238,44 +377,124 @@ const Reports = () => {
             <tr>
               <th>No.</th>
               <th>Patient Name</th>
-              <th>Risk Assessment</th>
-              <th>Other Records</th>
+              <th>Address</th>
+              <th>Birthdate</th>
+              <th>Age</th>
+              <th>Phone Number</th>
+              <th>LMP Date</th>
+              <th>EDC</th>
+              <th>Action</th>
             </tr>
           </thead>
           <tbody>
             {pregnantData.map((preg, index) => (
-              <React.Fragment key={preg.id}>
-                <tr>
-                  <td>{index + 1}</td>
-                  <td>{preg.name}</td>
-                  <td>{preg.riskAssessment}</td>
-                  <td>
-                    <button
-                      style={{ backgroundColor: 'green', color: '#fff', border: 'none', padding: '4px 8px', cursor: 'pointer' }}
-                      onClick={() => togglePregnantDropdown(preg.id)}
-                    >
-                      {showPregnantRecords[preg.id] ? 'Hide Records ⬆' : 'Show Records ⬇'}
-                    </button>
-                  </td>
-                </tr>
-                {showPregnantRecords[preg.id] &&
-                  preg.records.map((r) => (
-                    <tr key={r.id} style={{ backgroundColor: '#f5f5f5' }}>
-                      <td colSpan={5}>
-                        {Object.entries(r).map(([k, v]) =>
-                          k === 'id' ? null : (
-                            <div key={k}>
-                              <strong>{k}:</strong> {v?.toString() || 'N/A'}
-                            </div>
-                          )
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-              </React.Fragment>
+              <tr key={preg.id}>
+                <td>{index + 1}</td>
+                <td>{preg.patientName}</td>
+                <td>{preg.address}</td>
+                <td>{preg.birthdate}</td>
+                <td>{preg.age}</td>
+                <td>{preg.phoneNumber}</td>
+                <td>{preg.lmp}</td>
+                <td>{preg.edc}</td>
+                <td>
+                  <button
+                    style={{
+                      backgroundColor: '#3498db',
+                      color: '#fff',
+                      border: 'none',
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                    }}
+                    onClick={() => openCheckupModal(preg)}
+                  >
+                    View Checkup Records
+                  </button>
+                </td>
+              </tr>
             ))}
           </tbody>
         </table>
+
+        {showModal && selectedPatient && (
+          <div className={styles.modalOverlay}>
+            <div className={styles.landscapeModal}>
+              <button
+                onClick={closeModal}
+                style={{
+                  position: 'absolute',
+                  top: '8px',
+                  right: '12px',
+                  background: 'transparent',
+                  border: 'none',
+                  fontSize: '20px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  color: '#e74c3c',
+                }}
+              >
+                ✕
+              </button>
+
+              <h3 style={{ textAlign: 'center', marginBottom: '20px' }}>
+                Checkup Records
+              </h3>
+
+              <div style={{ marginBottom: '20px', lineHeight: '1.8' }}>
+                <div><strong>NAME:</strong> <span style={{ textDecoration: 'underline' }}>{selectedPatient.patientName || ' '}</span></div>
+                <div><strong>ADDRESS:</strong> <span style={{ textDecoration: 'underline' }}>{selectedPatient.address || ' '}</span></div>
+                <div><strong>BIRTHDAY:</strong> <span style={{ textDecoration: 'underline' }}>{selectedPatient.birthdate || ' '}</span></div>
+                <div><strong>AGE:</strong> <span style={{ textDecoration: 'underline' }}>{selectedPatient.age || ' '}</span></div>
+                <div><strong>CP:</strong> <span style={{ textDecoration: 'underline' }}>{selectedPatient.phoneNumber || ' '}</span></div>
+                <div><strong>LMP:</strong> <span style={{ textDecoration: 'underline' }}>{selectedPatient.lmp || ' '}</span></div>
+                <div><strong>EDC:</strong> <span style={{ textDecoration: 'underline' }}>{selectedPatient.edc || ' '}</span></div>
+               
+              </div>
+
+              {/* ✅ Generate PDF button */}
+              <button
+                onClick={handleGeneratePatientPdf}
+                style={{
+                  backgroundColor: '#27ae60',
+                  color: '#fff',
+                  border: 'none',
+                  padding: '6px 10px',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  marginBottom: '10px'
+                }}
+              >
+                🡇 Generate PDF (Checkup Record)
+              </button>
+
+              <div className={styles.tableWrapper}>
+                <table className={styles.table}>
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      {checkupRecords.map((rec, idx) => (
+                        <th key={idx}>{rec.date}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.keys(checkupRecords[0] || {})
+                      .filter((k) => k !== 'date')
+                      .map((field) => (
+                        <tr key={field}>
+                          <td>{field}</td>
+                          {checkupRecords.map((rec, idx) => (
+                            <td key={idx}>{rec[field]}</td>
+                          ))}
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

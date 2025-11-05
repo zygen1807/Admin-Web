@@ -1,7 +1,20 @@
 .container {
-  padding: 2rem;
-  background: #f9fafb;
+   padding: 2rem;
+  background-color: #007e96;
   min-height: 100vh;
+  font-family: "Poppins", sans-serif;
+  margin-top: -10px;
+  border-radius: 10px;
+  margin-left: -10px;
+  margin-right: -20px;
+}
+
+.card,
+.cardFull {
+  background: #c9e0e4;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
 .title {
@@ -13,31 +26,38 @@
 
 .table {
   width: 100%;
-  border-collapse: collapse;
-  background: white;
-  border-radius: 0.75rem;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  border-collapse: collapse; /* merge borders into single line */
+  margin-top: 1rem;
+  background: #fff;
+  border-radius: 8px;
   overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
 }
 
-.table th,
-.table td {
-  padding: 1rem;
-  text-align: left;
-  border-bottom: 1px solid #e5e7eb;
-}
-
+/* Header row */
 .table th {
-  background-color: #6e6c6c; /* dark gray */
-  color: #ffffff; /* white text for contrast */
-  font-weight: 600;
-  text-align: center;
+  background-color: #2b94a9;
+  color: #fff;
+  font-weight: bold;
+  text-align: left;
+  padding: 12px;
+  border: 1px solid #d1d5db; /* ✅ thin line around each cell */
 }
 
+/* Data rows */
+.table td {
+  border: 1px solid #e2e8f0; /* ✅ single neat border for rows & columns */
+  padding: 12px;
+  text-align: left;
+  color: #2d3748;
+}
 
+/* Hover effect */
 .table tr:hover {
   background-color: #f9fafb;
+  transition: background-color 0.2s ease;
 }
+
 
 .assignButton {
   background-color: #2563eb;

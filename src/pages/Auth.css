@@ -1,43 +1,96 @@
-/* Fullscreen background only for login/signup */
-.auth-page {
+/* Full page background */
+.login-page {
   min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
-  background: url('/public/bg.jpg') no-repeat center center fixed;
-  background-size: cover;
-  font-family: 'Arial', sans-serif;
+  background: #d9e3f7;
+  font-family: "Arial", sans-serif;
 }
 
-/* Login/Signup container (desktop style) */
-.auth-container {
-  max-width: 600px;   /* larger for desktop admin */
+/* Main container (holds image + form) */
+.login-container {
+  display: flex;
+  max-width: 1100px;
+  width: 95%;
+  background: white;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+}
+
+/* Left Section */
+.left-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  background: #ffffff;
+  padding: 0;
+  margin: 0;
+}
+
+/* Doctor image takes full width */
+.doctor-image {
   width: 100%;
-  margin: 40px auto;
-  padding: 60px 50px;
-  text-align: center;
-  background: rgba(255, 255, 255, 0.95); /* more solid for clarity */
-  border-radius: 20px;
-  box-shadow: 0px 15px 40px rgba(0, 0, 0, 0.25);
-  backdrop-filter: blur(10px);
-  transition: transform 0.3s ease;
+  height: auto;
+  display: block;
+  border-radius: 0;
+  margin: 0;
+  padding: 0;
 }
 
-.auth-container:hover {
-  transform: translateY(-3px); /* subtle lift effect */
-}
-
-/* Logo */
-.logo {
-  width: 140px;
-  margin-bottom: 30px;
-  animation: fadeInDown 0.8s ease;
-}
-
-/* Input groups */
-.input-group {
-  margin-bottom: 22px;
+/* Blue welcome box (tight, no padding gap) */
+.welcome-box {
+  background: #007e96;
+  color: rgb(255, 255, 255);
+  width: 100%;
   text-align: left;
+  padding: 30px 40px;
+  box-sizing: border-box;
+  border-radius: 0;
+}
+
+.welcome-box h2 {
+  font-size: 24px;
+  margin-bottom: 10px;
+  font-weight: 700;
+  color: rgb(255, 255, 255);
+}
+
+.welcome-box p {
+  font-size: 18px;
+  line-height: 1.5;
+  opacity: 0.9;
+}
+
+/* Right Section */
+.right-section {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  padding: 60px;
+}
+
+.form-container {
+  width: 100%;
+  max-width: 360px;
+}
+
+.form-container h2 {
+  font-size: 28px;
+  color: #007e96;
+  font-weight: bold;
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+/* Input Groups */
+.input-group {
+  margin-bottom: 20px;
 }
 
 .input-group label {
@@ -51,17 +104,17 @@
   display: flex;
   align-items: center;
   border: 1px solid #ccc;
-  border-radius: 30px;
-  padding: 12px 18px;
+  border-radius: 8px;
+  padding: 12px 14px;
   background: #fff;
-  transition: all 0.3s ease;
+  transition: 0.3s ease;
 }
 
 .input-with-icon input {
   flex: 1;
   border: none;
   outline: none;
-  padding-left: 12px;
+  padding-left: 10px;
   font-size: 15px;
   background: transparent;
 }
@@ -72,56 +125,55 @@
 }
 
 .input-with-icon:focus-within {
-  border-color: #00a7b3;
-  box-shadow: 0 0 8px rgba(0, 167, 179, 0.3);
+  border-color: #007e96;
+  box-shadow: 0 0 8px rgba(42, 77, 208, 0.3);
 }
 
 /* Button */
 .auth-button {
-  background: linear-gradient(135deg, #00a7b3, #007e96);
+  background: #007e96;
   color: white;
   border: none;
   padding: 14px 40px;
-  border-radius: 30px;
+  border-radius: 8px;
   font-size: 17px;
   font-weight: bold;
   cursor: pointer;
-  box-shadow: 0px 6px 14px rgba(0,0,0,0.2);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
   transition: transform 0.2s ease, background 0.3s ease;
-  margin-top: 10px;
+  width: 100%;
 }
 
 .auth-button:hover {
-  background: linear-gradient(135deg, #007e96, #005f6b);
+  background: #007e96;
   transform: translateY(-2px);
 }
 
 /* Footer */
 .footer-text {
-  margin-top: 25px;
+  margin-top: 20px;
   font-size: 14px;
-  color: #444;
+  color: #555;
+  text-align: center;
 }
 
 .link {
   color: #007e96;
-  cursor: pointer;
   font-weight: bold;
-  transition: color 0.3s ease;
+  cursor: pointer;
+  transition: color 0.3s;
 }
 
 .link:hover {
-  color: #00a7b3;
+  color: #007e96;
 }
 
-/* Logo animation */
-@keyframes fadeInDown {
-  from {
-    opacity: 0;
-    transform: translateY(-25px);
+/* Responsive */
+@media (max-width: 850px) {
+  .login-container {
+    flex-direction: column;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+  .left-section {
+    display: none;
   }
 }

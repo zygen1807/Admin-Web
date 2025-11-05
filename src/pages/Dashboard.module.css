@@ -1,81 +1,148 @@
+/* === Overall Dashboard Container === */
 .dashboard {
   padding: 2rem;
+  background-color: #007e96;
+  min-height: 100vh;
+  font-family: "Poppins", sans-serif;
+  margin-top: -10px;
+  border-radius: 10px;
+  margin-left: -10px;
+  margin-right: -20px;
 }
 
+.cardFull {
+  background: #c9e0e4;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+/* === Title Section === */
 .title {
   font-size: 2rem;
   font-weight: bold;
-  margin-bottom: 0rem;
-   color: #4b5563;
-     margin-top: 5rem;
+  margin-top: 5rem;
+  margin-bottom: 0.5rem;
+  color: #374151;
 }
 
+/* === Date & Time Widget === */
+.dateTimeContainer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-bottom: 25px;
+}
+
+.dateTimeWidget {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  padding: 12px 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(0, 126, 150, 0.2);
+  transition: transform 0.2s ease, box-shadow 0.3s ease;
+}
+
+.dateTimeWidget:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+.dateText {
+  font-size: 15px;
+  font-weight: 500;
+  color: #007e96;
+  letter-spacing: 0.5px;
+}
+
+.timeText {
+  font-size: 22px;
+  font-weight: 700;
+  color: #007e96;
+  margin-top: 4px;
+  letter-spacing: 1px;
+}
+
+/* === Stats Cards Grid === */
 .cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 1.5rem;
   margin-top: 16px;
+  padding: 0 10px;
 }
 
+/* === Individual Card Style === */
 .card {
+  border-radius: 16px;
   padding: 1.5rem;
-  border-radius: 14px;
-  box-shadow: 0 24px 16px rgba(0, 0, 0, 0.12);
-  color: #4b5563;
-  position: relative;
-  overflow: hidden;
-  transition: transform 0.15s;
-}
-
-.card:nth-child(1) {
-  background: linear-gradient(135deg, #ffffff 60%, #ffffff 100%);
-}
-
-.card:nth-child(2) {
-  background: linear-gradient(135deg, #ffffff 60%, #ffffff 100%);
-}
-
-.card:nth-child(3) {
-  background: linear-gradient(135deg, #ffffff 60%, #ffffff 100%);
-}
-
-.card:nth-child(4) {
-  background: linear-gradient(135deg, #ffffff 60%, #ffffff 100%);
+  color: #111;
+  background: #fff;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border-left: 6px solid transparent;
 }
 
 .card:hover {
-  transform: translateY(-6px) scale(1.03);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.18);
+  transform: translateY(-5px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
 }
 
+/* === Card Header (label + icon) === */
 .cardHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #007e96;
   margin-bottom: 1rem;
-  font-size: 1.1rem;
 }
 
+.cardHeader span {
+  font-size: 2rem;
+  color: #007e96;
+}
+
+/* === Card Value === */
 .cardValue {
-  font-size: 3.1rem;
-  font-weight: bold;
-  margin-bottom: 0.5rem;
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #007e96;
 }
 
-.positive {
-  color: #d1fae5;
-  font-weight: 500;
+/* === Gradient Borders and Soft Backgrounds === */
+.gradientBlue {
+  border-left-color: #3b82f6;
+  background: linear-gradient(135deg, #e0f0ff, #f7fbff);
 }
 
-.negative {
-  color: #fee2e2;
-  font-weight: 500;
+.gradientGray {
+  border-left-color: #6b7280;
+  background: linear-gradient(135deg, #f3f4f6, #ebebeb);
 }
+
+.gradientYellow {
+  border-left-color: #facc15;
+  background: linear-gradient(135deg, #fff8e1, #fffef5);
+}
+
+.gradientPink {
+  border-left-color: #ec4899;
+  background: linear-gradient(135deg, #ffe6f0, #fff5fa);
+}
+
+/* === Charts Section === */
 .chartsSection {
   display: flex;
   gap: 24px;
   padding: 20px;
   flex-wrap: wrap;
+  justify-content: center;
 }
 
 .chartCard {
@@ -83,12 +150,39 @@
   min-width: 300px;
   background: #ffffff;
   border-radius: 16px;
-  padding: 16px;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.20);
+  padding: 20px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+  transition: transform 0.2s ease, box-shadow 0.3s ease;
+}
+
+.chartCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 6px 28px rgba(0, 0, 0, 0.18);
 }
 
 .chartCard h2 {
-  font-size: 1.2rem;
+  font-size: 1.3rem;
   font-weight: bold;
   margin-bottom: 16px;
+  color: #007e96;
+  text-align: center;
+}
+
+/* === Responsive Layout === */
+@media (max-width: 768px) {
+  .chartsSection {
+    flex-direction: column;
+  }
+
+  .chartCard {
+    width: 100%;
+  }
+
+  .dateTimeWidget {
+    align-items: center;
+  }
+
+  .timeText {
+    font-size: 18px;
+  }
 }

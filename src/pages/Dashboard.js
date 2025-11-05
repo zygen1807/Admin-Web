@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { FaUser, FaMapMarkerAlt, FaFileAlt, FaBell } from 'react-icons/fa';
+import { FaUser, FaUserSlash, FaClock, FaBaby } from 'react-icons/fa';
 import styles from './Dashboard.module.css';
-import { getDocs, collection, query, where, getDoc, doc } from 'firebase/firestore';
+import { getDocs, collection, query, where } from 'firebase/firestore';
 import { db } from '../firebase';
 
-import { Bar, Doughnut } from 'react-chartjs-2';
+import { Bar, Doughnut, Line } from 'react-chartjs-2';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import {
   Chart as ChartJS,
@@ -32,46 +32,45 @@ ChartJS.register(
 
 const Dashboard = () => {
   const [pregnantUsersCount, setPregnantUsersCount] = useState(0);
-  const [locationTrackedCount, setLocationTrackedCount] = useState(0);
-  const [trimesterCount, setTrimesterCount] = useState(0);
-  const [reportsGenerated, setReportsGenerated] = useState(0);
-
+  const [inactiveCount, setInactiveCount] = useState(0);
+  const [dueWeekCount, setDueWeekCount] = useState(0);
+  const [deliveredCount, setDeliveredCount] = useState(0);
   const [allPregnantUsers, setAllPregnantUsers] = useState([]);
-  const [filteredTrimesterData, setFilteredTrimesterData] = useState({ first: 0, second: 0, third: 0 });
+  const [filteredTrimesterData, setFilteredTrimesterData] = useState({
+    first: 0,
+    second: 0,
+    third: 0,
+  });
+
+  const [dueWeekPerMonth, setDueWeekPerMonth] = useState(new Array(12).fill(0));
+  const [postpartumPerMonth, setPostpartumPerMonth] = useState(new Array(12).fill(0));
+const [currentDateTime, setCurrentDateTime] = useState(new Date());
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        // Pregnant Users Count
         const usersSnap = await getDocs(collection(db, 'pregnant_users'));
         setPregnantUsersCount(usersSnap.size);
 
-        // Location Tracked Count
-        const locSnap = await getDocs(collection(db, 'pregnant_locations'));
-        setLocationTrackedCount(locSnap.size);
+        const inactiveSnap = await getDocs(collection(db, 'pregnant_inactive'));
+        setInactiveCount(inactiveSnap.size);
 
-        // 3rd Trimester Count
-        const trimesterQuery = query(
-          collection(db, 'pregnant_trimester'),
-          where('trimester', '==', '3rd Trimester')
-        );
-        const trimesterSnap = await getDocs(trimesterQuery);
-        setTrimesterCount(trimesterSnap.size);
+        const dueWeekQuery = query(collection(db, 'pregnant_trimester'), where('weeks', '>=', 36));
+        const dueWeekSnap = await getDocs(dueWeekQuery);
+        setDueWeekCount(dueWeekSnap.size);
 
-        // Reports Generated Count
-        const countDocRef = doc(db, 'report_stats', 'generated');
-        const docSnap = await getDoc(countDocRef);
-        setReportsGenerated(docSnap.exists() ? docSnap.data().count || 0 : 0);
+        const deliveredSnap = await getDocs(collection(db, 'done_pregnants'));
+        setDeliveredCount(deliveredSnap.size);
 
-        // Pregnant Users for Charts
-        const allUsers = usersSnap.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          createdAt: doc.data().createdAt?.toDate?.(),
-        })).filter(user => !!user.createdAt);
+        const allUsers = usersSnap.docs
+          .map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt?.toDate?.(),
+          }))
+          .filter(user => !!user.createdAt);
         setAllPregnantUsers(allUsers);
 
-        // Trimester Distribution
         const trimesterSnapAll = await getDocs(collection(db, 'pregnant_trimester'));
         let trimesterCounts = { first: 0, second: 0, third: 0 };
         trimesterSnapAll.forEach(doc => {
@@ -81,6 +80,28 @@ const Dashboard = () => {
           else if (t === '3rd Trimester') trimesterCounts.third++;
         });
         setFilteredTrimesterData(trimesterCounts);
+
+        // Calculate Due Week Pregnant per month
+        let dueMonthCounts = new Array(12).fill(0);
+        dueWeekSnap.forEach(doc => {
+          const createdAt = doc.data().updatedAt?.toDate?.();
+          if (createdAt) {
+            const month = createdAt.getMonth();
+            dueMonthCounts[month] += 1;
+          }
+        });
+        setDueWeekPerMonth(dueMonthCounts);
+
+        // Calculate Postpartum per month
+        let postpartumMonthCounts = new Array(12).fill(0);
+        deliveredSnap.forEach(doc => {
+          const createdAt = doc.data().deliveredAt?.toDate?.();
+          if (createdAt) {
+            const month = createdAt.getMonth();
+            postpartumMonthCounts[month] += 1;
+          }
+        });
+        setPostpartumPerMonth(postpartumMonthCounts);
       } catch (err) {
         console.error('Error fetching dashboard stats:', err);
       }
@@ -89,15 +110,20 @@ const Dashboard = () => {
     fetchStats();
   }, []);
 
+  useEffect(() => {
+  const timer = setInterval(() => setCurrentDateTime(new Date()), 1000);
+  return () => clearInterval(timer);
+}, []);
+
+
   const stats = [
-    { label: 'Total Pregnant Women', value: pregnantUsersCount, icon: <FaUser />, changeType: 'positive' },
-    { label: 'Total Active Location-Tracked Pregnant Women', value: locationTrackedCount, icon: <FaMapMarkerAlt />, changeType: 'positive' },
-    { label: 'Reports Generated', value: reportsGenerated, icon: <FaFileAlt />, changeType: 'positive' },
-    { label: 'Pregnant Women in 3rd Trimester', value: trimesterCount, icon: <FaBell />, changeType: 'negative' },
+    { label: 'Total Active Pregnant Women', value: pregnantUsersCount, icon: <FaUser />, colorClass: styles.gradientBlue },
+    { label: 'Total Inactive Pregnant Women', value: inactiveCount, icon: <FaUserSlash />, colorClass: styles.gradientGray },
+    { label: 'Pregnant Women in Due Week', value: dueWeekCount, icon: <FaClock />, colorClass: styles.gradientYellow },
+    { label: 'Delivered Pregnant Women', value: deliveredCount, icon: <FaBaby />, colorClass: styles.gradientPink },
   ];
 
-  // Charts Data
-  const barData = {
+  const groupedBarData = {
     labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
     datasets: [
       {
@@ -107,12 +133,45 @@ const Dashboard = () => {
           acc[month] = (acc[month] || 0) + 1;
           return acc;
         }, new Array(12).fill(0)),
-        backgroundColor: 'rgba(16,185,129,0.7)',
-        borderRadius: 8,
-        borderSkipped: false,
-        maxBarThickness: 32,
+        backgroundColor: 'rgba(59,130,246,0.8)',
+      },
+      {
+        label: 'Due Week Pregnant',
+        data: dueWeekPerMonth,
+        backgroundColor: 'rgba(253,224,71,0.8)',
+      },
+      {
+        label: 'Postpartum',
+        data: postpartumPerMonth,
+        backgroundColor: 'rgba(236,72,153,0.8)',
       },
     ],
+  };
+
+  // ✅ Updated: Add datalabels above each bar
+  const groupedBarOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+   plugins: {
+  legend: { display: true, position: 'bottom' },
+  tooltip: { mode: 'index', intersect: false },
+  datalabels: {
+    display: true, // 👈 make numbers visible
+    color: '#ffffffff', // 👈 change number color (e.g. black)
+    anchor: 'end',
+    align: 'start',
+    font: {
+      weight: 'bold',
+      size: 14,
+    },
+    formatter: (value) => (value > 0 ? value : ''), // hides zeros
+  },
+},
+
+    scales: {
+      x: { title: { display: true, text: 'Month' }, grid: { display: false } },
+      y: { title: { display: true, text: 'No. of Users' }, beginAtZero: true, ticks: { stepSize: 1 } },
+    },
   };
 
   const doughnutData = {
@@ -136,35 +195,6 @@ const Dashboard = () => {
     ],
   };
 
-  const barOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-      tooltip: { mode: 'index', intersect: false },
-      datalabels: {
-        anchor: 'end',
-        align: 'top',
-        color: '#111827',
-        font: { weight: 'bold' },
-      },
-    },
-    scales: {
-      x: { title: { display: true, text: 'Month' }, grid: { display: false } },
-     y: {
-  beginAtZero: true,
-  min: 0,
-  max: 50, // ✅ Force Y-axis to go up to 50
-  title: { display: true, text: 'No. of Pregnant Users' },
-  grid: { color: '#f3f4f6' },
-  ticks: {
-    stepSize: 5, // ✅ control increments (5, 10, 15, …)
-  },
-},
-
-    },
-  };
-
   const doughnutOptions = {
     responsive: true,
     maintainAspectRatio: false,
@@ -182,14 +212,47 @@ const Dashboard = () => {
     },
   };
 
+  const formatDateTime = (date) => {
+  return date.toLocaleString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+};
+
+
   return (
     <div className={styles.dashboard}>
-      <h1 className={styles.title}>Dashboard</h1>
+      <div className={styles.cardFull}>
+      <div className={styles.dateTimeContainer}>
+  <div className={styles.dateTimeWidget}>
+    <span className={styles.dateText}>
+      {currentDateTime.toLocaleDateString("en-US", {
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      })}
+    </span>
+    <span className={styles.timeText}>
+      {currentDateTime.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      })}
+    </span>
+  </div>
+</div>
 
-      {/* Stats Cards */}
+
+      {/* ✅ Gradient Cards */}
       <div className={styles.cards}>
         {stats.map((item, index) => (
-          <div key={index} className={styles.card}>
+          <div key={index} className={`${styles.card} ${item.colorClass}`}>
             <div className={styles.cardHeader}>
               <p>{item.label}</p>
               <span>{item.icon}</span>
@@ -199,63 +262,49 @@ const Dashboard = () => {
         ))}
       </div>
 
-      {/* Charts Section */}
-      <h1 className={styles.title}>Analytics</h1>
+      {/* ✅ Analytics Section */}
       <div className={styles.chartsSection}>
 
-        {/* Single container for Doughnut chart + trimester counts */}
+        {/* ✅ Pregnant Trimester Distribution */}
         <div className={styles.chartCard}>
           <h2>Pregnant Trimester Distribution</h2>
-          <div>
-            
-            {/* Doughnut Chart */}
-            <div style={{ height: '300px' }}>
-              <Doughnut data={doughnutData} options={doughnutOptions} />
-            </div>
+          <div style={{ height: '300px' }}>
+            <Doughnut data={doughnutData} options={doughnutOptions} />
+          </div>
 
-            {/* Trimester counts */}
-            <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: '20px' }}>
-              <div style={{ textAlign: 'center' }}>
-                <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#3B82F6' }}>
-                  {filteredTrimesterData.first} users
-                </span>
-                <p style={{ margin: 0 }}>1st Trimester</p>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#22C55E' }}>
-                  {filteredTrimesterData.second} users
-                </span>
-                <p style={{ margin: 0 }}>2nd Trimester</p>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#EF4444' }}>
-                  {filteredTrimesterData.third} users
-                </span>
-                <p style={{ margin: 0 }}>3rd Trimester</p>
-              </div>
+          <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: '20px' }}>
+            <div style={{ textAlign: 'center' }}>
+              <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#3B82F6' }}>
+                {filteredTrimesterData.first} users
+              </span>
+              <p style={{ margin: 0 }}>1st Trimester</p>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#22C55E' }}>
+                {filteredTrimesterData.second} users
+              </span>
+              <p style={{ margin: 0 }}>2nd Trimester</p>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#EF4444' }}>
+                {filteredTrimesterData.third} users
+              </span>
+              <p style={{ margin: 0 }}>3rd Trimester</p>
             </div>
           </div>
         </div>
 
-      {/* Bar chart stretched version */}
-<div className={styles.chartCard}>
-  <h2>Pregnant Users by Month</h2>
-  <div
-    style={{
-      marginTop: "40px",       
-      width: "100%",              
-      height: "400px",            
-      maxWidth: "900px",          
-      alignSelf: "center",        
-    }}
-  >
-    <Bar data={barData} options={barOptions} />
-  </div>
-</div>
-
+        <div className={styles.chartCard}>
+          <h2>Pregnant Users, Due Week & Postpartum Per Month</h2>
+          <div style={{ height: '400px', marginTop: '40px' }}>
+            {/* ✅ Add plugin for datalabels */}
+            <Bar data={groupedBarData} options={groupedBarOptions} plugins={[ChartDataLabels]} />
+          </div>
+        </div>
 
       </div>
     </div>
+</div>
   );
 };
 

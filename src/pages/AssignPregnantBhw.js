@@ -23,7 +23,6 @@ const AssignPregnantBhw = () => {
   const [showCheckupModal, setShowCheckupModal] = useState(false);
   const [selectedPregnant, setSelectedPregnant] = useState(null);
   const [checkupDate, setCheckupDate] = useState("");
-  const [checkupTime, setCheckupTime] = useState("");
   const [loading, setLoading] = useState(true);
 
   // Fetch all BHWs and Pregnant Users
@@ -113,15 +112,14 @@ const AssignPregnantBhw = () => {
 
   // Save first checkup info
   const handleSaveCheckup = async () => {
-    if (!checkupDate || !checkupTime) {
-      alert("Please enter date and time for first check-up");
+    if (!checkupDate) {
+      alert("Please enter a date for first check-up");
       return;
     }
 
     const checkupRef = doc(db, `date_checkup_records/${selectedPregnant.id}`);
     await setDoc(checkupRef, {
       date: checkupDate,
-      time: checkupTime,
       bhwId: selectedBhw.id,
       patientId: selectedPregnant.id,
     });
@@ -136,7 +134,6 @@ const AssignPregnantBhw = () => {
     setShowCheckupModal(false);
     setSelectedPregnant(null);
     setCheckupDate("");
-    setCheckupTime("");
   };
 
   // Remove assigned pregnant
@@ -154,12 +151,13 @@ const AssignPregnantBhw = () => {
 
   return (
     <div className={styles.container}>
+         <div className={styles.cardFull}>
       <h1 className={styles.title}>Assign Pregnant to BHW</h1>
 
       <table className={styles.table}>
         <thead>
           <tr>
-            <th>#</th>
+            <th>No.</th>
             <th>BHW Name</th>
             <th>Assigned Pregnant</th>
             <th>Action</th>
@@ -315,13 +313,6 @@ const AssignPregnantBhw = () => {
               value={checkupDate}
               onChange={(e) => setCheckupDate(e.target.value)}
             />
-            <label className={styles.inputLabel}>Time</label>
-            <input
-              type="time"
-              className={styles.inputField}
-              value={checkupTime}
-              onChange={(e) => setCheckupTime(e.target.value)}
-            />
             <div className={styles.modalActions}>
               <button
                 className={styles.cancelButton}
@@ -339,6 +330,7 @@ const AssignPregnantBhw = () => {
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 };

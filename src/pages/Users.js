@@ -2,19 +2,14 @@ import React, { useEffect, useState } from "react";
 import styles from "./Users.module.css";
 import { FaSearch } from "react-icons/fa";
 import {
+  getDocs,
   collection,
   doc,
-  getDocs,
-  updateDoc,
+  setDoc,
   deleteDoc,
-  addDoc,
-  query,
-  orderBy,
-  setDoc
 } from "firebase/firestore";
-import { db } from "../firebase";
+import { db, auth } from "../firebase";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../firebase";
 
 const User = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -22,95 +17,64 @@ const User = () => {
   const [showModal, setShowModal] = useState(false);
   const [userType, setUserType] = useState("Pregnant Women");
   const [allUsers, setAllUsers] = useState([]);
-  const [selectedUser, setSelectedUser] = useState(null);
 
-  // Disabled users list (pulled from Firestore field `disabled` if present)
-  const [disabledUsers, setDisabledUsers] = useState([]);
+  // at the top with other states
+const [showCheckupModal, setShowCheckupModal] = useState(false);
+const [checkupDate, setCheckupDate] = useState("");
 
-  // Checkup modal
-  const [showCheckupModal, setShowCheckupModal] = useState(false);
-  const [checkupRecords, setCheckupRecords] = useState([]);
-  const [checkupLoading, setCheckupLoading] = useState(false);
-  const [selectedCheckupUser, setSelectedCheckupUser] = useState(null);
+  // inactive lists
+  const [pregnantInactive, setPregnantInactive] = useState([]);
+  const [bhwInactive, setBhwInactive] = useState([]);
+  const [rescuerInactive, setRescuerInactive] = useState([]);
 
-  // Updated name fields
+  // form fields
   const [firstName, setFirstName] = useState("");
   const [middleName, setMiddleName] = useState("");
   const [lastName, setLastName] = useState("");
-
-  // Other fields
   const [contact, setContact] = useState("");
   const [email, setEmail] = useState("");
   const [age, setAge] = useState("");
   const [address, setAddress] = useState("");
   const [lmp, setLmp] = useState("");
   const [birthDate, setBirthDate] = useState("");
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [errors, setErrors] = useState({});
 
-  const handleOpenModal = (user = null) => {
-    if (user) {
-      const nameParts = (user.name || "").split(" ");
-      setFirstName(nameParts[0] || "");
-      setMiddleName(nameParts[1] || "");
-      setLastName(nameParts.slice(2).join(" ") || "");
+  // added: when enabling from inactive, open modal to edit and preserve id
+  const [isEnabling, setIsEnabling] = useState(false);
+  const [addressList] = useState([
+    "Barangay 1 Centro",
+    "Barangay 1 San Miguel",
+    "Imbrasan",
+    "Mapaya 2 Barumbong",
+    "Himamara",
+    "Mapaya 2 Tagumpay",
+    "Mapaya 3 Ilocandia",
+    "Mapaya 3 Cusol Main",
+    "Mapaya 3 Cusol Annex",
+    "Mapaya 3 Ong-Ong",
+    "Mapaya 3 Catmon",
+    "Mapaya 3 Boundary",
+  ]); // you can replace with your real barangay list
 
-      setSelectedUser(user);
-      setContact(user.phone || "");
-      setEmail(user.email || "");
-      setAge(user.age || "");
-      setAddress(user.address || "");
-      setLmp(user.lmp || "");
-      setBirthDate(user.birthDate || "");
-      setUserType(user.type);
-    } else {
-      setSelectedUser(null);
-      setFirstName("");
-      setMiddleName("");
-      setLastName("");
-      setContact("");
-      setEmail("");
-      setAge("");
-      setAddress("");
-      setLmp("");
-      setBirthDate("");
-      setUserType("Pregnant Women");
-    }
-    setShowModal(true);
-  };
-
-  const handleCloseModal = () => setShowModal(false);
-  const handleUserTypeChange = (e) => setUserType(e.target.value);
 
   const fetchUsers = async () => {
     const pregnantSnap = await getDocs(collection(db, "pregnant_users"));
     const bhwSnap = await getDocs(collection(db, "bhw_users"));
     const rescuerSnap = await getDocs(collection(db, "rescuer_users"));
+    const inactivePreg = await getDocs(collection(db, "pregnant_inactive"));
+    const inactiveBhw = await getDocs(collection(db, "bhw_inactive"));
+    const inactiveRescuer = await getDocs(collection(db, "rescuer_inactive"));
 
-    const pregnant = pregnantSnap.docs.map((d) => ({
-      id: d.id,
-      ...d.data(),
-      collection: "pregnant_users",
-      type: "Pregnant Women",
-    }));
+    setAllUsers([
+      ...pregnantSnap.docs.map((d) => ({ id: d.id, ...d.data(), type: "Pregnant Women", collection: "pregnant_users" })),
+      ...bhwSnap.docs.map((d) => ({ id: d.id, ...d.data(), type: "BHW", collection: "bhw_users" })),
+      ...rescuerSnap.docs.map((d) => ({ id: d.id, ...d.data(), type: "Barangay Rescuer", collection: "rescuer_users" })),
+    ]);
 
-    const bhw = bhwSnap.docs.map((d) => ({
-      id: d.id,
-      ...d.data(),
-      collection: "bhw_users",
-      type: "BHW",
-    }));
-
-    const rescuer = rescuerSnap.docs.map((d) => ({
-      id: d.id,
-      ...d.data(),
-      collection: "rescuer_users",
-      type: "Barangay Rescuer",
-    }));
-
-    const combined = [...pregnant, ...bhw, ...rescuer];
-
-    // split disabled users (if the document has a `disabled: true` field)
-    setDisabledUsers(combined.filter((u) => u.disabled));
-    setAllUsers(combined.filter((u) => !u.disabled));
+    setPregnantInactive(inactivePreg.docs.map((d) => ({ id: d.id, ...d.data() })));
+    setBhwInactive(inactiveBhw.docs.map((d) => ({ id: d.id, ...d.data() })));
+    setRescuerInactive(inactiveRescuer.docs.map((d) => ({ id: d.id, ...d.data() })));
   };
 
   useEffect(() => {
@@ -123,225 +87,281 @@ const User = () => {
     return matchName && matchType;
   });
 
-  const handleDelete = async (user) => {
-    const confirmed = window.confirm(`Are you sure you want to delete ${user.name}?`);
-    if (!confirmed) return;
-
-    try {
-      await deleteDoc(doc(db, user.collection, user.id));
-      fetchUsers();
-      alert("User deleted successfully.");
-    } catch (error) {
-      console.error("Delete Error:", error);
-      alert("Failed to delete user.");
-    }
-  };
-
-  const handleSave = async () => {
-  if (!firstName || !lastName || !contact) {
-    alert("Please fill in all required fields.");
-    return;
-  }
-
-  const fullName = `${firstName} ${middleName} ${lastName}`.trim();
-  const autoPassword = birthDate
-    ? (() => {
-        const [year, month, day] = birthDate.split("-"); // "YYYY", "MM", "DD"
-        return `${month}${day}${year}`; // MMDDYYYY
-      })()
-    : "default123";
-
-  try {
-    if (selectedUser) {
-      // Update existing user
-      const userRef = doc(db, selectedUser.collection, selectedUser.id);
-      await updateDoc(userRef, {
-        name: fullName,
-        phone: contact,
-        email,
-        age,
-        address,
-        lmp,
-        birthDate,
-      });
-      alert("User updated.");
-    } else {
-      const confirmCreate = window.confirm(
-        `Are you sure you want to create an account for ${fullName}?`
-      );
-      if (!confirmCreate) return;
-
-      if (userType === "Pregnant Women") {
-        if (!email) {
-          alert("Please enter an Email address.");
-          return;
-        }
-
-        // 🔹 Create Firebase Auth user
-        const userCredential = await createUserWithEmailAndPassword(
-          auth,
-          email,
-          autoPassword
-        );
-
-        const patientId = userCredential.user.uid;
-
-        // 🔹 Create document with same ID as patientId
-        const pregnantRef = doc(db, "pregnant_users", patientId);
-        await setDoc(pregnantRef, {
-          patientId: patientId,
-          name: fullName,
-          phone: contact,
-          email,
-          age,
-          address,
-          lmp,
-          birthDate,
-          userType: "Pregnant",
-          createdAt: new Date(),
-          approved: true,
-        });
-
-        alert(`Pregnant user account created!\nDefault Password: ${autoPassword}`);
-      }
-
-      // ✅ NEW: Create BHW
-      else if (userType === "BHW") {
-        if (!email) {
-          alert("Please enter an Email address.");
-          return;
-        }
-
-        const userCredential = await createUserWithEmailAndPassword(
-          auth,
-          email,
-          autoPassword
-        );
-
-        const bhwId = userCredential.user.uid;
-
-        // 🔹 Create document with same ID as bhwId
-        const bhwRef = doc(db, "bhw_users", bhwId);
-        await setDoc(bhwRef, {
-          bhwId,
-          name: fullName,
-          phone: contact,
-          email,
-          address,
-          birthDate,
-          userType: "BHW",
-          createdAt: new Date(),
-        });
-
-        alert(`BHW account created!\nDefault Password: ${autoPassword}`);
-      }
-
-      // ✅ NEW: Create Barangay Rescuer
-      else if (userType === "Barangay Rescuer") {
-        if (!email) {
-          alert("Please enter an Email address.");
-          return;
-        }
-
-        const userCredential = await createUserWithEmailAndPassword(
-          auth,
-          email,
-          autoPassword
-        );
-
-        const rescuerId = userCredential.user.uid;
-
-        // 🔹 Create document with same ID as rescuerId
-        const rescuerRef = doc(db, "rescuer_users", rescuerId);
-        await setDoc(rescuerRef, {
-          rescuerId,
-          name: fullName,
-          phone: contact,
-          email,
-          address,
-          birthDate,
-          userType: "Barangay Rescuer",
-          createdAt: new Date(),
-        });
-
-        alert(`Barangay Rescuer account created!\nDefault Password: ${autoPassword}`);
-      }
-    }
-
-    setShowModal(false);
-    fetchUsers();
-  } catch (error) {
-    console.error("Save Error:", error);
-    alert("Failed to save user: " + error.message);
-  }
-};
-
-  // Open checkup records modal for a user
- const handleOpenCheckup = async (user) => {
-  try {
-    setSelectedCheckupUser(user);
-    setCheckupLoading(true);
-
-    // ✅ Path: checkup_record/{userId}/records
-    const recordsRef = collection(db, "checkup_record", user.id, "records");
-
-    // Fetch newest to oldest by date (if `createdAt` exists)
-    const q = query(recordsRef, orderBy("createdAt", "desc"));
-    const snap = await getDocs(q);
-
-    const recs = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-
-    setCheckupRecords(recs);
-    setShowCheckupModal(true);
-  } catch (err) {
-    console.error("Error fetching checkup records:", err);
-    alert("Failed to load checkup records.");
-  } finally {
-    setCheckupLoading(false);
-  }
-};
-
-  const handleCloseCheckup = () => {
-    setShowCheckupModal(false);
-    setCheckupRecords([]);
-    setSelectedCheckupUser(null);
-  };
-
-  // Disable user (moves to disabled table and marks doc.disabled = true)
+  // --- Disable handler
   const handleDisable = async (user) => {
     const confirm = window.confirm(`Disable ${user.name}?`);
     if (!confirm) return;
 
     try {
-      const userRef = doc(db, user.collection, user.id);
-      await updateDoc(userRef, { disabled: true });
+      // remove from active
+      await deleteDoc(doc(db, user.collection, user.id));
+
+      // add to respective inactive
+      let inactiveCol = "";
+      if (user.type === "Pregnant Women") inactiveCol = "pregnant_inactive";
+      if (user.type === "BHW") inactiveCol = "bhw_inactive";
+      if (user.type === "Barangay Rescuer") inactiveCol = "rescuer_inactive";
+
+      await setDoc(doc(collection(db, inactiveCol), user.id), user);
+
+      alert(`${user.name} disabled successfully.`);
       fetchUsers();
-    } catch (err) {
-      console.error("Disable error:", err);
-      alert("Failed to disable user.");
+    } catch (error) {
+      console.error("Disable Error:", error);
     }
   };
 
-  const handleEnable = async (user) => {
-    const confirm = window.confirm(`Enable ${user.name}?`);
-    if (!confirm) return;
+  // --- Enable handler
+  const handleEnable = (user, type) => {
+    // open modal pre-filled so admin can adjust fields (including Pregnancy count)
+    const nameParts = (user.name || "").split(" ");
+    setSelectedUser(user);
+    setUserType(user.type || "Pregnant Women");
+    setFirstName(nameParts[0] || "");
+    setMiddleName(nameParts.length > 2 ? nameParts.slice(1, -1).join(" ") : "");
+    setLastName(nameParts.length > 1 ? nameParts[nameParts.length - 1] : "");
+    setContact(user.phone || "");
+    setEmail(user.email || "");
+    setAddress(user.address || "");
+    setAge(user.age || "");
+    setLmp(user.lmp || "");
+    setBirthDate(user.birthDate || "");
 
+    setIsEnabling(true);
+    setShowModal(true);
+  };
+
+  // --- Modal handling
+  const handleOpenModal = () => setShowModal(true);
+  const clearForm = () => {
+    setIsEnabling(false);
+    setSelectedUser(null);
+    setUserType("Pregnant Women");
+    setFirstName("");
+    setMiddleName("");
+    setLastName("");
+    setContact("");
+    setEmail("");
+    setAge("");
+    setAddress("");
+    setLmp("");
+    setBirthDate("");
+    setErrors({});
+  };
+  const handleCloseModal = () => {
+    clearForm();
+    setShowModal(false);
+  };
+
+  const handleUserTypeChange = (e) => setUserType(e.target.value);
+
+  // --- Create user (and also handle 'enable' path when editing from inactive)
+ const handleSave = async () => {
+  const newErrors = {};
+
+  // Trim inputs
+  const fn = firstName.trim();
+  const mn = middleName.trim();
+  const ln = lastName.trim();
+  const em = email.trim();
+  const ph = contact.trim();
+  const bd = birthDate;
+  const lmpDate = lmp;
+  const addr = address;
+  const ag = age;
+
+  // Validate user type
+  if (!userType) newErrors.userType = "Please select user type.";
+
+  // Validate name parts individually so each field shows its own error
+  if (!fn) newErrors.firstName = "First name is required.";
+  if (!mn) newErrors.middleName = "Middle name is required.";
+  if (!ln) newErrors.lastName = "Last name is required.";
+
+  // Common validations
+  if (!em) newErrors.email = "Email is required.";
+  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) newErrors.email = "Email is not valid.";
+
+  if (!ph) newErrors.contact = "Contact number is required.";
+  else {
+    const contactRegex = /^[0-9]{11}$/;
+    if (!contactRegex.test(ph)) newErrors.contact = "Contact number must be exactly 11 digits.";
+  }
+
+  if (!bd) newErrors.birthDate = "Birth date is required.";
+  if (!addr) newErrors.address = "Address (barangay) is required.";
+
+  // Pregnant-specific validations
+  if (userType === "Pregnant Women") {
+    if (!ag && ag !== 0) newErrors.age = "Age is required.";
+    else if (isNaN(ag) || Number(ag) <= 0) newErrors.age = "Age must be a valid number greater than 0.";
+
+    if (!lmpDate) newErrors.lmp = "LMP date is required.";
+
+  }
+
+  // If any errors exist, set them and stop here (errors are shown under fields)
+  if (Object.keys(newErrors).length > 0) {
+    setErrors(newErrors);
+    return;
+  }
+
+  // Clear errors and continue
+  setErrors({});
+
+  // If we are enabling an existing inactive user -> move back to active with same doc id
+if (isEnabling && selectedUser) {
+  try {
+    const inactiveCol = "pregnant_inactive";
+    const activeCol = "pregnant_users";
+
+    const fullName = `${fn} ${mn} ${ln}`.trim();
+
+    const updatedUser = {
+      ...selectedUser,
+      id: selectedUser.id,
+      name: fullName,
+      phone: ph,
+      email: em,
+      age: ag,
+      address: addr,
+      birthDate: bd,
+      lmp: lmpDate,
+      userType,
+      updatedAt: new Date(),
+    };
+
+    // Move from inactive → active collection
+    await deleteDoc(doc(db, inactiveCol, selectedUser.id));
+    await setDoc(doc(db, activeCol, selectedUser.id), updatedUser);
+
+    // ✅ Reset old checkup records
     try {
-      const userRef = doc(db, user.collection, user.id);
-      await updateDoc(userRef, { disabled: false });
-      fetchUsers();
+      const checkupRecordsRef = collection(db, "checkup_record", selectedUser.id, "records");
+      const oldRecordsSnap = await getDocs(checkupRecordsRef);
+
+      if (!oldRecordsSnap.empty) {
+        let archiveName = "archived_records";
+        for (let i = 1; i <= 50; i++) {
+          const testName = i === 1 ? "archived_records" : `archived_records${i}`;
+          const testRef = collection(db, "checkup_record", selectedUser.id, testName);
+          const testSnap = await getDocs(testRef);
+          if (testSnap.empty) {
+            archiveName = testName;
+            break;
+          }
+        }
+
+        const archiveRef = collection(db, "checkup_record", selectedUser.id, archiveName);
+        for (const docSnap of oldRecordsSnap.docs) {
+          await setDoc(doc(archiveRef, docSnap.id), docSnap.data());
+          await deleteDoc(doc(checkupRecordsRef, docSnap.id));
+        }
+      }
+
+      const newRecordRef = doc(checkupRecordsRef);
+      await setDoc(newRecordRef, {});
     } catch (err) {
-      console.error("Enable error:", err);
-      alert("Failed to enable user.");
+      console.error("Error resetting checkup records:", err);
     }
-  };
-const toggleDropdown = (e) => {
-  const dropdown = e.currentTarget.nextSibling;
-  dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
+
+    // ✅ Show checkup date modal only for pregnant women
+    if (userType === "Pregnant Women") {
+      setShowCheckupModal(true);
+    }
+
+    setIsEnabling(false);
+    setShowModal(false);
+    fetchUsers();
+  } catch (error) {
+    console.error("Enable Error:", error);
+    setErrors({ general: error.message });
+  }
+  return;
+}
+
+  // --- Continue creating new user (unchanged logic) ---
+  const autoPassword = bd
+    ? (() => {
+        const [year, month, day] = bd.split("-");
+        return `${month}${day}${year}`;
+      })()
+    : "default123";
+
+  try {
+    const userCredential = await createUserWithEmailAndPassword(auth, em, autoPassword);
+    const userId = userCredential.user.uid;
+    let collectionName = "";
+
+    if (userType === "Pregnant Women") collectionName = "pregnant_users";
+    else if (userType === "BHW") collectionName = "bhw_users";
+    else if (userType === "Barangay Rescuer") collectionName = "rescuer_users";
+    else {
+      alert("Invalid user type");
+      return;
+    }
+
+    const fullName = `${fn} ${mn} ${ln}`.trim();
+
+    await setDoc(doc(db, collectionName, userId), {
+      id: userId,
+      name: fullName,
+      phone: ph,
+      email: em,
+      age: ag,
+      address: addr,
+      birthDate: bd,
+      lmp: lmpDate,
+      userType,
+      createdAt: new Date(),
+    });
+
+    alert(`${userType} account created!\nDefault password: ${autoPassword}`);
+    setShowModal(false);
+    setFirstName("");
+    setMiddleName("");
+    setLastName("");
+    setEmail("");
+    setContact("");
+    setAddress("");
+    setBirthDate("");
+    setAge("");
+    setLmp("");
+    fetchUsers();
+  } catch (error) {
+    console.error("Error creating user:", error);
+    setErrors({ general: error.message });
+  }
+};
+const handleSaveCheckup = async () => {
+  if (!checkupDate) {
+    alert("Please select a date for the first checkup");
+    return;
+  }
+
+  try {
+    await setDoc(doc(db, "first_checkup_dates", selectedUser.id), {
+      date: checkupDate,
+      patientId: selectedUser.id,
+    });
+
+    alert(`${selectedUser.name} enabled and first checkup date recorded!`);
+
+    // Close modal and reset state
+    setShowCheckupModal(false);
+    setCheckupDate("");
+    setSelectedUser(null);
+    setShowModal(false);
+    clearForm();
+    fetchUsers();
+  } catch (err) {
+    console.error("Error saving checkup date:", err);
+  }
 };
 
   return (
     <div className={styles.container}>
+         <div className={styles.cardFull}>
       <h1 className={styles.pageTitle}>User Management</h1>
 
       <div className={styles.headerRow}>
@@ -356,336 +376,544 @@ const toggleDropdown = (e) => {
           <FaSearch className={styles.searchIcon} />
         </div>
 
-        <div className={styles.filterGroup}>
-          <select
-            className={styles.filterDropdown}
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-          >
-            <option>All Users</option>
-            <option>Pregnant Women</option>
-            <option>BHW</option>
-            <option>Barangay Rescuer</option>
-          </select>
-        </div>
+        <select
+          className={styles.filterDropdown}
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+        >
+          <option>All Users</option>
+          <option>Pregnant Women</option>
+          <option>BHW</option>
+          <option>Barangay Rescuer</option>
+        </select>
 
-        <button className={styles.addUserButton} onClick={() => handleOpenModal()}>
+        <button className={styles.addUserButton} onClick={handleOpenModal}>
           + Create Account
         </button>
       </div>
 
-      {/* Main table (active users) */}
-      <table className={styles.table} style={{ color: "#333" }}>
+      {/* Active Users */}
+      <h2>Active Users</h2>
+      <table className={styles.table} style={{ border: "1px solid #333" }}>
         <thead style={{ backgroundColor: "#333", color: "#fff" }}>
           <tr>
-            <th>Name</th>
-            <th>Email</th>
-            <th>User Type</th>
-            <th>Actions</th>
+            <th style={{ border: "1px solid #ccc" }}>Name</th>
+            <th style={{ border: "1px solid #ccc" }}>Phone Number</th>
+            <th style={{ border: "1px solid #ccc" }}>User Type</th>
+            <th style={{ border: "1px solid #ccc" }}>Action</th>
           </tr>
         </thead>
         <tbody>
-          {filteredUsers.length > 0 ? (
-            filteredUsers.map((user) => (
-              <tr key={user.id}>
-                <td>{user.name || "N/A"}</td>
-                <td>{user.email || "N/A"}</td>
-                <td>{user.type}</td>
-                <td>
-                  {/* Removed Edit and Delete icons. Replaced with Checkup Info icon and Disable button */}
-
-       
-
-
-                  <button
-  className={`${styles.actionButton} ${user.disabled ? styles.disabled : styles.enabled}`}
-  onClick={() => handleDisable(user)}
->
-  Disable
-</button>
-
-                </td>
-              </tr>
-            ))
-          ) : (
-            <tr>
-              <td colSpan={4} style={{ textAlign: "center" }}>
-                No users found.
+          {filteredUsers.map((user) => (
+            <tr key={user.id}>
+              <td style={{ border: "1px solid #ccc" }}>{user.name}</td>
+              <td style={{ border: "1px solid #ccc" }}>{user.phone}</td>
+              <td style={{ border: "1px solid #ccc" }}>{user.type}</td>
+              <td style={{ border: "1px solid #ccc" }}>
+                <button
+                  style={{
+                    backgroundColor: "red",
+                    color: "#fff",
+                    border: "none",
+                    padding: "5px 10px",
+                    borderRadius: "5px",
+                  }}
+                  onClick={() => handleDisable(user)}
+                >
+                  Disable
+                </button>
               </td>
             </tr>
-          )}
+          ))}
         </tbody>
       </table>
-      <div className={styles.pagination}>
-        <span>Showing {filteredUsers.length} results</span>
-      </div>
+      {filteredUsers.length > 0 ? (
+  <p className={styles.resultsCount}>
+    Showing {filteredUsers.length} result{filteredUsers.length !== 1 ? "s" : ""}
+  </p>
+) : (
+  <p className={styles.noResults}>No active users found</p>
+)}
 
-      <div style={{ marginTop: 20 }}>
-        <h2>Disabled Users</h2>
-        <table className={styles.table} style={{ color: "#333" }}>
-          <thead style={{ backgroundColor: "#333", color: "#fff" }}>
-            <tr>
-              <th>Name</th>
-              <th>Email</th>
-              <th>User Type</th>
-              <th>Actions</th>
+      {/* Inactive Pregnant */}
+      <h2>Inactive Pregnant Women</h2>
+      <table className={styles.table} style={{ border: "1px solid #333" }}>
+        <thead style={{ backgroundColor: "#333", color: "#fff" }}>
+          <tr>
+            <th>Name</th>
+            <th>Phone Number</th>
+            <th>User Type</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {pregnantInactive.map((user) => (
+            <tr key={user.id}>
+              <td>{user.name}</td>
+              <td>{user.phone}</td>
+              <td>{user.userType}</td>
+              <td>
+                <button
+                  style={{
+                    backgroundColor: "green",
+                    color: "#fff",
+                    border: "none",
+                    padding: "5px 10px",
+                    borderRadius: "5px",
+                  }}
+                  onClick={() => handleEnable(user, "pregnant")}
+                >
+                  Enable
+                </button>
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {disabledUsers.length > 0 ? (
-              disabledUsers.map((user) => (
-                <tr key={user.id}>
-                  <td>{user.name || "N/A"}</td>
-                  <td>{user.email || "N/A"}</td>
-                  <td>{user.type}</td>
-                  <td>
-                    <button
-                      className={styles.iconButton}
-                      title="View Checkup Records"
-                      onClick={() => handleOpenCheckup(user)}
-                    >
-                      🩺
-                    </button>
+          ))}
+        </tbody>
+      </table>
+      
+{pregnantInactive.length > 0 ? (
+  <p className={styles.resultsCount}>
+    Showing {pregnantInactive.length} result{pregnantInactive.length !== 1 ? "s" : ""}
+  </p>
+) : (
+  <p className={styles.noResults}>No inactive pregnant women found</p>
+)}
 
-                    <button
-  className={`${styles.actionButton} ${user.disabled ? styles.disabled : styles.enabled}`}
-  onClick={() => handleEnable(user)}
->
-  Enable
-</button>
+      {/* Inactive BHW */}
+      <h2>Inactive BHW</h2>
+      <table className={styles.table} style={{ border: "1px solid #333" }}>
+        <thead style={{ backgroundColor: "#333", color: "#fff" }}>
+          <tr>
+            <th>Name</th>
+            <th>Phone Number</th>
+            <th>User Type</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {bhwInactive.map((user) => (
+            <tr key={user.id}>
+              <td>{user.name}</td>
+              <td>{user.phone}</td>
+              <td>{user.userType}</td>
+              <td>
+                <button
+                  style={{
+                    backgroundColor: "green",
+                    color: "#fff",
+                    border: "none",
+                    padding: "5px 10px",
+                    borderRadius: "5px",
+                  }}
+                  onClick={() => handleEnable(user, "bhw")}
+                >
+                  Enable
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      
+{bhwInactive.length > 0 ? (
+  <p className={styles.resultsCount}>
+    Showing {bhwInactive.length} result{bhwInactive.length !== 1 ? "s" : ""}
+  </p>
+) : (
+  <p className={styles.noResults}>No inactive BHW found</p>
+)}
 
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={4} style={{ textAlign: "center" }}>
-                  No disabled users.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+      {/* Inactive Rescuer */}
+      <h2>Inactive Barangay Rescuer</h2>
+      <table className={styles.table} style={{ border: "1px solid #333" }}>
+        <thead style={{ backgroundColor: "#333", color: "#fff" }}>
+          <tr>
+            <th>Name</th>
+            <th>Phone Number</th>
+            <th>User Type</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rescuerInactive.map((user) => (
+            <tr key={user.id}>
+              <td>{user.name}</td>
+              <td>{user.phone}</td>
+              <td>{user.userType}</td>
+              <td>
+                <button
+                  style={{
+                    backgroundColor: "green",
+                    color: "#fff",
+                    border: "none",
+                    padding: "5px 10px",
+                    borderRadius: "5px",
+                  }}
+                  onClick={() => handleEnable(user, "rescuer")}
+                >
+                  Enable
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      
+{rescuerInactive.length > 0 ? (
+  <p className={styles.resultsCount}>
+    Showing {rescuerInactive.length} result{rescuerInactive.length !== 1 ? "s" : ""}
+  </p>
+) : (
+  <p className={styles.noResults}>No inactive rescuers found</p>
+)}
+{showCheckupModal && selectedUser && (
+  <div className={styles.modalOverlay}>
+    <div className={styles.modal}>
+      <button
+        className={styles.modalClose}
+        onClick={() => setShowCheckupModal(false)}
+      >
+        &times;
+      </button>
+
+      <h3 className={styles.modalTitle}>
+        Set First Checkup Date for {selectedUser.name}
+      </h3>
+
+      <label>
+        Date:
+        <input
+          type="date"
+          value={checkupDate}
+          onChange={(e) => setCheckupDate(e.target.value)}
+          className={styles.input}
+        />
+      </label>
+
+      <div className={styles.modalFooter}>
+        <button
+          className={styles.buttonCancel}
+          onClick={() => setShowCheckupModal(false)}
+        >
+          Cancel
+        </button>
+        <button
+          className={styles.buttonAdd}
+          onClick={handleSaveCheckup}
+        >
+          Save
+        </button>
       </div>
-
-      <div className={styles.pagination}>
-  <span>Showing {disabledUsers.length} results</span>
-</div>
+    </div>
+  </div>
+)}
 
       {/* Create / Edit modal (kept largely the same as original) */}
       {showModal && (
         <div className={styles.modalOverlay}>
           <div className={styles.modal}>
+            {/* Close (X) - clears form and closes modal */}
             <button className={styles.modalClose} onClick={handleCloseModal}>
               &times;
             </button>
-            <div className={styles.modalHeader}>
-              {selectedUser ? "Edit User" : "Create Account User"}
-            </div>
+            
+            <div className={styles.modalHeader}>{selectedUser ? "Edit User" : "Create Account User"}</div>
 
             <div className={styles.modalBody}>
               <label>
                 User Type
-                <select
-                  value={userType}
-                  onChange={handleUserTypeChange}
-                  disabled={!!selectedUser}
-                >
+                <select value={userType} onChange={handleUserTypeChange} disabled={!!selectedUser} className={styles.input}>
                   <option value="Pregnant Women">Pregnant Women</option>
                   <option value="BHW">BHW</option>
                   <option value="Barangay Rescuer">Barangay Rescuer</option>
                 </select>
+                {errors.userType && <p className={styles.errorText}>{errors.userType}</p>}
               </label>
 
               {/* Pregnant Women fields */}
-              {userType === "Pregnant Women" && (
-                <>
-                  <label>
-                    First Name
-                    <input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
-                  </label>
-                  <label>
-                    Middle Name
-                    <input type="text" value={middleName} onChange={(e) => setMiddleName(e.target.value)} />
-                  </label>
-                  <label>
-                    Last Name
-                    <input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} />
-                  </label>
-                  <label>
-                    Age
-                    <input type="number" value={age} onChange={(e) => setAge(e.target.value)} />
-                  </label>
-                  <label>
-                    Address
-                    <input type="text" value={address} onChange={(e) => setAddress(e.target.value)} />
-                  </label>
-                  <label>
-                    Contact Number
-                    <input type="tel" value={contact} onChange={(e) => setContact(e.target.value)} />
-                  </label>
-                  <label>
-                    Email
-                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-                  </label>
-                  <label>
-                    LMP Date
-                    <input type="date" value={lmp} onChange={(e) => setLmp(e.target.value)} />
-                  </label>
-                  <label>
-                    Birth Date
-                    <input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />
-                  </label>
-                </>
-              )}
+{userType === "Pregnant Women" && (
+  <>
+    <label>
+      First Name <span style={{ color: "red" }}>*</span>
+      <input
+        type="text"
+        value={firstName}
+        onChange={(e) => setFirstName(e.target.value)}
+        className={`${styles.input} ${errors.firstName ? styles.inputError : ""}`}
+      />
+      {errors.firstName && <p className={styles.errorText}>{errors.firstName}</p>}
+    </label>
 
-              {/* BHW fields */}
-              {userType === "BHW" && (
-                <>
-                  <label>
-                    First Name
-                    <input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
-                  </label>
-                  <label>
-                    Middle Name
-                    <input type="text" value={middleName} onChange={(e) => setMiddleName(e.target.value)} />
-                  </label>
-                  <label>
-                    Last Name
-                    <input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} />
-                  </label>
-                  <label>
-                    Contact Number
-                    <input type="tel" value={contact} onChange={(e) => setContact(e.target.value)} />
-                  </label>
-                  <label>
-                    Address
-                    <input type="text" value={address} onChange={(e) => setAddress(e.target.value)} />
-                  </label>
-                  <label>
-                    Email
-                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-                  </label>
-                  <label>
-                    Birth Date
-                    <input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />
-                  </label>
-                </>
-              )}
+    <label>
+      Middle Name <span style={{ color: "red" }}>*</span>
+      <input
+        type="text"
+        value={middleName}
+        onChange={(e) => setMiddleName(e.target.value)}
+        className={`${styles.input} ${errors.middleName ? styles.inputError : ""}`}
+      />
+      {errors.middleName && <p className={styles.errorText}>{errors.middleName}</p>}
+    </label>
 
-              {/* Barangay Rescuer fields */}
-              {userType === "Barangay Rescuer" && (
-                <>
-                  <label>
-                    First Name
-                    <input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
-                  </label>
-                  <label>
-                    Middle Name
-                    <input type="text" value={middleName} onChange={(e) => setMiddleName(e.target.value)} />
-                  </label>
-                  <label>
-                    Last Name
-                    <input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} />
-                  </label>
-                  <label>
-                    Contact Number
-                    <input type="tel" value={contact} onChange={(e) => setContact(e.target.value)} />
-                  </label>
-                  <label>
-                    Address
-                    <input type="text" value={address} onChange={(e) => setAddress(e.target.value)} />
-                  </label>
-                  <label>
-                    Email
-                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-                  </label>
-                  <label>
-                    Birth Date
-                    <input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />
-                  </label>
-                </>
-              )}
+    <label>
+      Last Name <span style={{ color: "red" }}>*</span>
+      <input
+        type="text"
+        value={lastName}
+        onChange={(e) => setLastName(e.target.value)}
+        className={`${styles.input} ${errors.lastName ? styles.inputError : ""}`}
+      />
+      {errors.lastName && <p className={styles.errorText}>{errors.lastName}</p>}
+    </label>
+
+    <label>
+      Age <span style={{ color: "red" }}>*</span>
+      <input
+        type="number"
+        value={age}
+        onChange={(e) => setAge(e.target.value)}
+        className={`${styles.input} ${errors.age ? styles.inputError : ""}`}
+      />
+      {errors.age && <p className={styles.errorText}>{errors.age}</p>}
+    </label>
+
+    <label>
+      Address (Barangay) <span style={{ color: "red" }}>*</span>
+      <select
+        value={address}
+        onChange={(e) => setAddress(e.target.value)}
+        className={`${styles.input} ${errors.address ? styles.inputError : ""}`}
+      >
+        <option value="">Select Purok in Barangay Mapaya</option>
+        {addressList.map((barangay, index) => (
+          <option key={index} value={barangay}>
+            {barangay}
+          </option>
+        ))}
+      </select>
+      {errors.address && <p className={styles.errorText}>{errors.address}</p>}
+    </label>
+
+    <label>
+      Contact Number <span style={{ color: "red" }}>*</span>
+      <input
+        type="tel"
+        value={contact}
+        onChange={(e) => setContact(e.target.value)}
+        className={`${styles.input} ${errors.contact ? styles.inputError : ""}`}
+      />
+      {errors.contact && <p className={styles.errorText}>{errors.contact}</p>}
+    </label>
+
+    <label>
+      Email <span style={{ color: "red" }}>*</span>
+      <input
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        className={`${styles.input} ${errors.email ? styles.inputError : ""}`}
+      />
+      {errors.email && <p className={styles.errorText}>{errors.email}</p>}
+    </label>
+
+    <label>
+      LMP Date <span style={{ color: "red" }}>*</span>
+      <input
+        type="date"
+        value={lmp}
+        onChange={(e) => setLmp(e.target.value)}
+        className={`${styles.input} ${errors.lmp ? styles.inputError : ""}`}
+      />
+      {errors.lmp && <p className={styles.errorText}>{errors.lmp}</p>}
+    </label>
+
+    <label>
+      Birth Date <span style={{ color: "red" }}>*</span>
+      <input
+        type="date"
+        value={birthDate}
+        onChange={(e) => setBirthDate(e.target.value)}
+        className={`${styles.input} ${errors.birthDate ? styles.inputError : ""}`}
+      />
+      {errors.birthDate && <p className={styles.errorText}>{errors.birthDate}</p>}
+    </label>
+  </>
+)}
+
+{/* BHW fields */}
+{userType === "BHW" && (
+  <>
+    <label>
+      First Name <span style={{ color: "red" }}>*</span>
+      <input
+        type="text"
+        value={firstName}
+        onChange={(e) => setFirstName(e.target.value)}
+        className={`${styles.input} ${errors.firstName ? styles.inputError : ""}`}
+      />
+      {errors.firstName && <p className={styles.errorText}>{errors.firstName}</p>}
+    </label>
+
+    <label>
+      Middle Name <span style={{ color: "red" }}>*</span>
+      <input
+        type="text"
+        value={middleName}
+        onChange={(e) => setMiddleName(e.target.value)}
+        className={`${styles.input} ${errors.middleName ? styles.inputError : ""}`}
+      />
+      {errors.middleName && <p className={styles.errorText}>{errors.middleName}</p>}
+    </label>
+
+    <label>
+      Last Name <span style={{ color: "red" }}>*</span>
+      <input
+        type="text"
+        value={lastName}
+        onChange={(e) => setLastName(e.target.value)}
+        className={`${styles.input} ${errors.lastName ? styles.inputError : ""}`}
+      />
+      {errors.lastName && <p className={styles.errorText}>{errors.lastName}</p>}
+    </label>
+
+    <label>
+      Contact Number <span style={{ color: "red" }}>*</span>
+      <input
+        type="tel"
+        value={contact}
+        onChange={(e) => setContact(e.target.value)}
+        className={`${styles.input} ${errors.contact ? styles.inputError : ""}`}
+      />
+      {errors.contact && <p className={styles.errorText}>{errors.contact}</p>}
+    </label>
+
+    <label>
+      Address <span style={{ color: "red" }}>*</span>
+      <input
+        type="text"
+        value={address}
+        onChange={(e) => setAddress(e.target.value)}
+        className={`${styles.input} ${errors.address ? styles.inputError : ""}`}
+      />
+      {errors.address && <p className={styles.errorText}>{errors.address}</p>}
+    </label>
+
+    <label>
+      Email <span style={{ color: "red" }}>*</span>
+      <input
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        className={`${styles.input} ${errors.email ? styles.inputError : ""}`}
+      />
+      {errors.email && <p className={styles.errorText}>{errors.email}</p>}
+    </label>
+
+    <label>
+      Birth Date <span style={{ color: "red" }}>*</span>
+      <input
+        type="date"
+        value={birthDate}
+        onChange={(e) => setBirthDate(e.target.value)}
+        className={`${styles.input} ${errors.birthDate ? styles.inputError : ""}`}
+      />
+      {errors.birthDate && <p className={styles.errorText}>{errors.birthDate}</p>}
+    </label>
+  </>
+)}
+
+{/* Barangay Rescuer fields */}
+{userType === "Barangay Rescuer" && (
+  <>
+    <label>
+      First Name <span style={{ color: "red" }}>*</span>
+      <input
+        type="text"
+        value={firstName}
+        onChange={(e) => setFirstName(e.target.value)}
+        className={`${styles.input} ${errors.firstName ? styles.inputError : ""}`}
+      />
+      {errors.firstName && <p className={styles.errorText}>{errors.firstName}</p>}
+    </label>
+
+    <label>
+      Middle Name <span style={{ color: "red" }}>*</span>
+      <input
+        type="text"
+        value={middleName}
+        onChange={(e) => setMiddleName(e.target.value)}
+        className={`${styles.input} ${errors.middleName ? styles.inputError : ""}`}
+      />
+      {errors.middleName && <p className={styles.errorText}>{errors.middleName}</p>}
+    </label>
+
+    <label>
+      Last Name <span style={{ color: "red" }}>*</span>
+      <input
+        type="text"
+        value={lastName}
+        onChange={(e) => setLastName(e.target.value)}
+        className={`${styles.input} ${errors.lastName ? styles.inputError : ""}`}
+      />
+      {errors.lastName && <p className={styles.errorText}>{errors.lastName}</p>}
+    </label>
+
+    <label>
+      Contact Number <span style={{ color: "red" }}>*</span>
+      <input
+        type="tel"
+        value={contact}
+        onChange={(e) => setContact(e.target.value)}
+        className={`${styles.input} ${errors.contact ? styles.inputError : ""}`}
+      />
+      {errors.contact && <p className={styles.errorText}>{errors.contact}</p>}
+    </label>
+
+    <label>
+      Address <span style={{ color: "red" }}>*</span>
+      <input
+        type="text"
+        value={address}
+        onChange={(e) => setAddress(e.target.value)}
+        className={`${styles.input} ${errors.address ? styles.inputError : ""}`}
+      />
+      {errors.address && <p className={styles.errorText}>{errors.address}</p>}
+    </label>
+
+    <label>
+      Email <span style={{ color: "red" }}>*</span>
+      <input
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        className={`${styles.input} ${errors.email ? styles.inputError : ""}`}
+      />
+      {errors.email && <p className={styles.errorText}>{errors.email}</p>}
+    </label>
+
+    <label>
+      Birth Date <span style={{ color: "red" }}>*</span>
+      <input
+        type="date"
+        value={birthDate}
+        onChange={(e) => setBirthDate(e.target.value)}
+        className={`${styles.input} ${errors.birthDate ? styles.inputError : ""}`}
+      />
+      {errors.birthDate && <p className={styles.errorText}>{errors.birthDate}</p>}
+    </label>
+  </>
+)}
             </div>
 
-           <div className={styles.modalFooter}>
-            <button
-            className={styles.buttonAdd}
-            onClick={handleSave}
-            style={{ width: "100%" }} // expand to full width
-                >
-    {selectedUser ? "Save Changes" : "Create Account"}
-  </button>
-</div>
-
+            <div className={styles.modalFooter}>
+              <button className={styles.buttonAdd} onClick={handleSave} style={{ width: "100%" }}>
+                {isEnabling ? "Enable" : selectedUser ? "Save Changes" : "Create Account"}
+              </button>
+            </div>
           </div>
         </div>
-          )}
-
-      {/* Checkup Records Modal (landscape-like display) */}
-     {showCheckupModal && (
-  <div className={styles.modalOverlay}>
-    <div className={styles.modal} style={{ width: "500px", maxHeight: "80vh", overflowY: "auto" }}>
-      <button className={styles.modalClose} onClick={handleCloseCheckup}>
-        &times;
-      </button>
-
-      <div className={styles.modalHeader}>
-        Checkup Records for {selectedCheckupUser?.name || "User"}
-      </div>
-
-      <div className={styles.modalBody}>
-        {checkupLoading ? (
-          <p>Loading...</p>
-        ) : checkupRecords.length === 0 ? (
-          <p>No checkup records found.</p>
-        ) : (
-          checkupRecords.map((rec) => {
-            const created = rec.createdAt && rec.createdAt.toDate
-              ? rec.createdAt.toDate()
-              : rec.createdAt
-              ? new Date(rec.createdAt)
-              : null;
-
-            const title = created ? created.toLocaleString() : rec.id;
-
-            // Toggle dropdown
-            const toggleDropdown = (e) => {
-              const dropdown = e.currentTarget.nextSibling;
-              dropdown.style.display =
-                dropdown.style.display === "block" ? "none" : "block";
-            };
-
-            return (
-              <div key={rec.id} className={styles.checkupCard}>
-                <button className={styles.recordButton} onClick={toggleDropdown}>
-                  {title} ⬇
-                </button>
-
-                <div className={styles.recordDropdown}>
-                  {Object.entries(rec).map(([k, v]) => {
-                    if (k === "id") return null;
-                    const display =
-                      v && typeof v === "object" ? JSON.stringify(v) : String(v);
-                    return (
-                      <div key={k} className={styles.recordField}>
-                        <strong>{k}:</strong> {display}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })
-        )}
-      </div>
-
-      <div className={styles.modalFooter}>
-        
-      </div>
+      )}
     </div>
-  </div>
-)}
     </div>
   );
 };

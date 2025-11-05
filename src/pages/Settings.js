@@ -87,6 +87,7 @@ const Settings = () => {
 
   return (
     <div className={styles.container}>
+      <div className={styles.cardFull}>
       <h1>Account Settings</h1>
 
       {/* Profile Info */}
@@ -171,6 +172,7 @@ const Settings = () => {
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 };
