@@ -7,6 +7,8 @@ import {
   setDoc,
   updateDoc,
   increment,
+  query,
+  where,
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import styles from './Reports.module.css';
@@ -24,6 +26,7 @@ const Reports = () => {
   const [showModal, setShowModal] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [checkupRecords, setCheckupRecords] = useState([]);
+  const [deliveredUsers, setDeliveredUsers] = useState([]);
 
   const filterByDateRange = (activities, filter, startDate, endDate) => {
     const now = new Date();
@@ -45,7 +48,12 @@ const Reports = () => {
           itemYear === lastMonthDate.getFullYear()
         );
       } else if (filter === 'Custom Range' && startDate && endDate) {
-        return itemDate >= startDate && itemDate <= endDate;
+        // normalize times for inclusive comparison
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        return itemDate >= start && itemDate <= end;
       }
 
       return true;
@@ -64,43 +72,81 @@ const Reports = () => {
   };
 
   useEffect(() => {
-    const fetchBhwActivity = async () => {
+    const fetchSummaryData = async () => {
       try {
-        const snapshot = await getDocs(collection(db, 'bhw_activity'));
-        const allActivities = snapshot.docs.map((doc) => {
-          const data = doc.data();
-          const timestamp = data.timestamp?.toDate?.();
-          const duties = data.duties || 0;
-          const task = data.task || 0;
-          const tracking = data.tracking || 0;
-          const total = duties + task + tracking;
+        // --- 1️⃣ Active Pregnant Women ---
+        const activeSnap = await getDocs(collection(db, 'pregnant_users'));
+        const activeList = [];
 
-          let remarks = 'Incomplete';
-          if (total >= 30) remarks = 'Completed';
-          else if (total >= 20) remarks = 'Ongoing Monitoring';
+        for (let docSnap of activeSnap.docs) {
+          const user = { id: docSnap.id, ...docSnap.data() };
 
-          return {
-            id: doc.id,
-            name: data.name || 'N/A',
-            address: data.address || 'N/A',
-            duties,
-            task,
-            tracking,
-            total,
-            remarks,
-            timestamp,
-          };
-        });
+          // Fetch EDC from pregnant_trimester
+          const trimesterSnap = await getDocs(
+            query(
+              collection(db, 'pregnant_trimester'),
+              where('patientId', '==', user.id)
+            )
+          );
+          const trimesterData = trimesterSnap.docs[0]?.data();
+          user.edc = trimesterData?.edc || '—';
+          user.lmp = trimesterData?.lmp || user.lmp || null;
+          user.birthDate = user.birthDate || user.birthdate || null;
+          user.timestamp = user.timestamp || trimesterData?.timestamp || null;
 
-        const filtered = filterByDateRange(
-          allActivities,
+          activeList.push({
+            ...user,
+            // keep formatted fields for display (but keep original data too)
+            birthDate: formatDate(user.birthDate),
+            lmp: user.lmp ? formatDate(user.lmp) : 'N/A',
+            edc: user.edc ? formatDate(user.edc) : 'N/A',
+          });
+        }
+
+        // --- 4️⃣ Delivered Pregnant Women ---
+        const deliveredSnap = await getDocs(collection(db, 'done_pregnants'));
+        const deliveredList = [];
+
+        for (let docSnap of deliveredSnap.docs) {
+          const user = { id: docSnap.id, ...docSnap.data() };
+
+          // Fetch patient details from pregnant_users
+          const userDoc = await getDoc(doc(db, 'pregnant_users', user.id));
+          const userData = userDoc.exists() ? userDoc.data() : {};
+
+          // Fetch EDC from pregnant_trimester
+          const trimesterSnap = await getDocs(
+            query(
+              collection(db, 'pregnant_trimester'),
+              where('patientId', '==', user.id)
+            )
+          );
+          const trimesterData = trimesterSnap.docs[0]?.data();
+
+          // Combine all info
+          deliveredList.push({
+            id: user.id,
+            name: userData.name || '—',
+            address: userData.address || '—',
+            birthDate: formatDate(userData.birthDate),
+            age: userData.age || '—',
+            phone: userData.phone || '—',
+            lmp: userData.lmp ? formatDate(userData.lmp) : 'N/A',
+            edc: trimesterData?.edc ? formatDate(trimesterData.edc) : 'N/A',
+            deliveredAt: user.deliveredAt ? formatDate(user.deliveredAt) : 'N/A', // Date Delivered
+            timestamp: user.timestamp || user.deliveredAt || null, // for filtering
+          });
+        }
+
+        const filteredDelivered = filterByDateRange(
+          deliveredList,
           filter,
           customStartDate,
           customEndDate
         );
-        setBhwData(filtered);
-      } catch (error) {
-        console.error('Error fetching BHW activity:', error);
+        setDeliveredUsers(filteredDelivered);
+      } catch (err) {
+        console.error('Error fetching summary data:', err);
       }
     };
 
@@ -114,19 +160,19 @@ const Reports = () => {
           usersMap[u.id] = { id: u.id, ...u.data() };
         });
 
-        const combinedData = trimesterSnap.docs.map((doc) => {
-          const trimesterData = doc.data();
+        const combinedData = trimesterSnap.docs.map((docItem) => {
+          const trimesterData = docItem.data();
           const userInfo = usersMap[trimesterData.patientId] || {};
 
           return {
-            id: doc.id,
+            id: docItem.id,
             patientId: trimesterData.patientId,
             patientName: userInfo.name || '',
-            lmp: formatDate(trimesterData.lmp),
-            edc: formatDate(trimesterData.edc),
+            lmp: trimesterData.lmp ? formatDate(trimesterData.lmp) : 'N/A',
+            edc: trimesterData.edc ? formatDate(trimesterData.edc) : 'N/A',
             bmi: trimesterData.bmi || '',
             address: userInfo.address || '',
-            birthdate: formatDate(userInfo.birthDate),
+            birthdate: userInfo.birthDate ? formatDate(userInfo.birthDate) : 'N/A',
             age: userInfo.age || '',
             phoneNumber: userInfo.phone || '',
           };
@@ -138,7 +184,8 @@ const Reports = () => {
       }
     };
 
-    fetchBhwActivity();
+    // Call both fetchers in parallel
+    fetchSummaryData();
     fetchPregnantData();
   }, [filter, customStartDate, customEndDate]);
 
@@ -156,38 +203,31 @@ const Reports = () => {
     }
   };
 
-  const handleGeneratePdf = async () => {
+  const generateSummaryPdf = (data, filename, tableTitle = 'Pregnant Women Report') => {
+    if (!data || data.length === 0) return;
+
     const doc = new jsPDF();
     doc.setFontSize(14);
-    doc.text('Province of Occidental Mindoro', 105, 15, { align: 'center' });
-    doc.text('Municipality of San Jose', 105, 23, { align: 'center' });
-    doc.text(`${filter.toUpperCase()} 2025`, 105, 31, { align: 'center' });
 
-    const tableData = bhwData.map((item, index) => [
-      index + 1,
-      item.name,
-      item.address,
-      item.duties,
-      item.task,
-      item.tracking,
-      item.total,
-      item.remarks,
+    // Header format like BHW report
+    doc.text('Province of Occidental Mindoro', doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
+    doc.text('Municipality of San Jose', doc.internal.pageSize.getWidth() / 2, 23, { align: 'center' });
+    doc.text(tableTitle, doc.internal.pageSize.getWidth() / 2, 31, { align: 'center' });
+
+    const tableData = data.map((u, i) => [
+      i + 1,
+      u.patientName || u.name || 'N/A',
+      u.address || 'N/A',
+      u.birthDate || 'N/A',
+      u.age || 'N/A',
+      u.phone || 'N/A',
+      u.lmp || 'N/A',
+      u.edc || 'N/A',
     ]);
 
     autoTable(doc, {
       startY: 40,
-      head: [
-        [
-          'No.',
-          'Name',
-          'Address',
-          'Duties',
-          'Task',
-          'Pregnancy\nTracking',
-          'Total',
-          'Remarks',
-        ],
-      ],
+      head: [['No.', 'Patient Name', 'Address', 'Birthdate', 'Age', 'Phone Number', 'LMP Date', 'EDC']],
       body: tableData,
       styles: { fontSize: 9, cellPadding: 2 },
       headStyles: { fillColor: [41, 128, 185], halign: 'center' },
@@ -195,8 +235,7 @@ const Reports = () => {
       theme: 'grid',
     });
 
-    doc.save(`bhw_activity_report_${filter.replace(' ', '_').toLowerCase()}_2025.pdf`);
-    await incrementReportCount();
+    doc.save(`${filename}.pdf`);
   };
 
   const openCheckupModal = async (preg) => {
@@ -204,14 +243,12 @@ const Reports = () => {
     setShowModal(true);
 
     try {
-      const recSnap = await getDocs(
-        collection(db, 'checkup_record', preg.patientId, 'records')
-      );
+      const recSnap = await getDocs(collection(db, 'checkup_record', preg.patientId, 'records'));
       const recData = recSnap.docs
         .map((d) => {
           const data = d.data();
           return {
-            date: formatDate(data.date),
+            date: data.date ? formatDate(data.date) : 'N/A',
             BP: data.bloodPressure || '—',
             HT: data.height || '—',
             WT: data.weight || '—',
@@ -236,7 +273,11 @@ const Reports = () => {
             URINALYSIS: data.urinalysis || '—',
           };
         })
-        .sort((a, b) => new Date(a.date) - new Date(b.date));
+        .sort((a, b) => {
+          const da = new Date(a.date);
+          const dbb = new Date(b.date);
+          return da - dbb;
+        });
 
       setCheckupRecords(recData);
     } catch (err) {
@@ -256,9 +297,8 @@ const Reports = () => {
     if (!selectedPatient || checkupRecords.length === 0) return;
 
     const doc = new jsPDF();
-    doc.setFontSize(12);
-   doc.setFontSize(14);
-doc.text('Prenatal Checkup Record', doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
+    doc.setFontSize(14);
+    doc.text('Prenatal Checkup Record', doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
 
     doc.setFontSize(10);
     let y = 25;
@@ -270,7 +310,7 @@ doc.text('Prenatal Checkup Record', doc.internal.pageSize.getWidth() / 2, 15, { 
       ['CP NO:', selectedPatient.phoneNumber || ''],
       ['LMP:', selectedPatient.lmp || ''],
       ['EDC:', selectedPatient.edc || ''],
-      ['BMI:', selectedPatient.bmi || '']
+      ['BMI:', selectedPatient.bmi || ''],
     ];
     info.forEach(([label, value]) => {
       doc.text(`${label}`, 14, y);
@@ -278,9 +318,9 @@ doc.text('Prenatal Checkup Record', doc.internal.pageSize.getWidth() / 2, 15, { 
       y += 6;
     });
 
-    const headers = ['Date', ...checkupRecords.map(r => r.date)];
-    const fields = Object.keys(checkupRecords[0] || {}).filter(f => f !== 'date');
-    const body = fields.map(f => [f, ...checkupRecords.map(r => r[f] || '—')]);
+    const headers = ['Date', ...checkupRecords.map((r) => r.date)];
+    const fields = Object.keys(checkupRecords[0] || {}).filter((f) => f !== 'date');
+    const body = fields.map((f) => [f, ...checkupRecords.map((r) => r[f] || '—')]);
 
     autoTable(doc, {
       startY: y + 4,
@@ -292,7 +332,7 @@ doc.text('Prenatal Checkup Record', doc.internal.pageSize.getWidth() / 2, 15, { 
       theme: 'grid',
     });
 
-    doc.save(`${selectedPatient.patientName.replace(/\s+/g, '_')}_checkup_record.pdf`);
+    doc.save(`${(selectedPatient.patientName || 'patient').replace(/\s+/g, '_')}_checkup_record.pdf`);
   };
 
   return (
@@ -307,9 +347,6 @@ doc.text('Prenatal Checkup Record', doc.internal.pageSize.getWidth() / 2, 15, { 
                 <option>Last Month</option>
                 <option>Custom Range</option>
               </select>
-              <button onClick={handleGeneratePdf} className={styles.generateBtn}>
-                🡇 Generate Report
-              </button>
             </div>
 
             {filter === 'Custom Range' && (
@@ -329,49 +366,55 @@ doc.text('Prenatal Checkup Record', doc.internal.pageSize.getWidth() / 2, 15, { 
           </div>
         </div>
 
-        <h2>BHW Activity Summary</h2>
+        {/* --- 4️⃣ Delivered Pregnant Women --- */}
+        <h3>
+          Delivered Pregnant Women ({deliveredUsers.length})
+          <button
+            onClick={() => generateSummaryPdf(deliveredUsers, 'delivered_pregnant', 'Delivered Pregnant Women Report')}
+            style={{
+              backgroundColor: '#27ae60',
+              color: '#fff',
+              border: 'none',
+              padding: '6px 10px',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              marginBottom: '5px',
+              marginLeft: '12px',
+            }}
+          >
+            🡇 Generate Report
+          </button>
+        </h3>
         <table className={styles.table}>
           <thead>
             <tr>
               <th>No.</th>
-              <th>BHW Name</th>
+              <th>Patient Name</th>
               <th>Address</th>
-              <th>Duties</th>
-              <th>Task</th>
-              <th>Pregnancy Tracking</th>
-              <th>Total</th>
-              <th>Remarks</th>
+              <th>Birthdate</th>
+              <th>Age</th>
+              <th>Phone Number</th>
+              <th>LMP Date</th>
+              <th>EDC</th>
             </tr>
           </thead>
           <tbody>
-            {bhwData.map((bhw, index) => (
-              <tr key={index}>
-                <td>{index + 1}</td>
-                <td>{bhw.name}</td>
-                <td>{bhw.address}</td>
-                <td>{bhw.duties}</td>
-                <td>{bhw.task}</td>
-                <td>{bhw.tracking}</td>
-                <td>{bhw.total}</td>
-                <td>
-                  <span
-                    className={`${styles.remark} ${
-                      bhw.remarks === 'Completed'
-                        ? styles.green
-                        : bhw.remarks === 'Ongoing Monitoring'
-                        ? styles.orange
-                        : styles.red
-                    }`}
-                  >
-                    {bhw.remarks}
-                  </span>
-                </td>
+            {deliveredUsers.map((u, i) => (
+              <tr key={u.id}>
+                <td>{i + 1}</td>
+                <td>{u.name}</td>
+                <td>{u.address}</td>
+                <td>{u.birthDate}</td>
+                <td>{u.age}</td>
+                <td>{u.phone}</td>
+                <td>{u.lmp}</td>
+                <td>{u.edc}</td>
               </tr>
             ))}
           </tbody>
         </table>
 
-        <h2>Pregnant Checkup Records</h2>
+        <h2 style={{ marginTop: '50px' }}>Pregnant Checkup Records</h2>
         <table className={styles.table}>
           <thead>
             <tr>
@@ -437,19 +480,37 @@ doc.text('Prenatal Checkup Record', doc.internal.pageSize.getWidth() / 2, 15, { 
                 ✕
               </button>
 
-              <h3 style={{ textAlign: 'center', marginBottom: '20px' }}>
-                Checkup Records
-              </h3>
+              <h3 style={{ textAlign: 'center', marginBottom: '20px' }}>Checkup Records</h3>
 
               <div style={{ marginBottom: '20px', lineHeight: '1.8' }}>
-                <div><strong>NAME:</strong> <span style={{ textDecoration: 'underline' }}>{selectedPatient.patientName || ' '}</span></div>
-                <div><strong>ADDRESS:</strong> <span style={{ textDecoration: 'underline' }}>{selectedPatient.address || ' '}</span></div>
-                <div><strong>BIRTHDAY:</strong> <span style={{ textDecoration: 'underline' }}>{selectedPatient.birthdate || ' '}</span></div>
-                <div><strong>AGE:</strong> <span style={{ textDecoration: 'underline' }}>{selectedPatient.age || ' '}</span></div>
-                <div><strong>CP:</strong> <span style={{ textDecoration: 'underline' }}>{selectedPatient.phoneNumber || ' '}</span></div>
-                <div><strong>LMP:</strong> <span style={{ textDecoration: 'underline' }}>{selectedPatient.lmp || ' '}</span></div>
-                <div><strong>EDC:</strong> <span style={{ textDecoration: 'underline' }}>{selectedPatient.edc || ' '}</span></div>
-               
+                <div>
+                  <strong>NAME:</strong>{' '}
+                  <span style={{ textDecoration: 'underline' }}>{selectedPatient.patientName || ' '}</span>
+                </div>
+                <div>
+                  <strong>ADDRESS:</strong>{' '}
+                  <span style={{ textDecoration: 'underline' }}>{selectedPatient.address || ' '}</span>
+                </div>
+                <div>
+                  <strong>BIRTHDAY:</strong>{' '}
+                  <span style={{ textDecoration: 'underline' }}>{selectedPatient.birthdate || ' '}</span>
+                </div>
+                <div>
+                  <strong>AGE:</strong>{' '}
+                  <span style={{ textDecoration: 'underline' }}>{selectedPatient.age || ' '}</span>
+                </div>
+                <div>
+                  <strong>CP:</strong>{' '}
+                  <span style={{ textDecoration: 'underline' }}>{selectedPatient.phoneNumber || ' '}</span>
+                </div>
+                <div>
+                  <strong>LMP:</strong>{' '}
+                  <span style={{ textDecoration: 'underline' }}>{selectedPatient.lmp || ' '}</span>
+                </div>
+                <div>
+                  <strong>EDC:</strong>{' '}
+                  <span style={{ textDecoration: 'underline' }}>{selectedPatient.edc || ' '}</span>
+                </div>
               </div>
 
               {/* ✅ Generate PDF button */}
@@ -462,7 +523,7 @@ doc.text('Prenatal Checkup Record', doc.internal.pageSize.getWidth() / 2, 15, { 
                   padding: '6px 10px',
                   borderRadius: '4px',
                   cursor: 'pointer',
-                  marginBottom: '10px'
+                  marginBottom: '10px',
                 }}
               >
                 🡇 Generate PDF (Checkup Record)

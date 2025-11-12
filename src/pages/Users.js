@@ -43,18 +43,18 @@ const [checkupDate, setCheckupDate] = useState("");
   // added: when enabling from inactive, open modal to edit and preserve id
   const [isEnabling, setIsEnabling] = useState(false);
   const [addressList] = useState([
-    "Barangay 1 Centro",
-    "Barangay 1 San Miguel",
+    "Centro",
+    "San Miguel",
     "Imbrasan",
-    "Mapaya 2 Barumbong",
+    "Barumbong",
     "Himamara",
-    "Mapaya 2 Tagumpay",
-    "Mapaya 3 Ilocandia",
-    "Mapaya 3 Cusol Main",
-    "Mapaya 3 Cusol Annex",
-    "Mapaya 3 Ong-Ong",
-    "Mapaya 3 Catmon",
-    "Mapaya 3 Boundary",
+    "Tagumpay",
+    "Ilocandia",
+    "Cusol Main",
+    "Cusol Annex",
+    "Ong-Ong",
+    "Catmon",
+    "Boundary",
   ]); // you can replace with your real barangay list
 
 
@@ -167,7 +167,7 @@ const [checkupDate, setCheckupDate] = useState("");
   const ph = contact.trim();
   const bd = birthDate;
   const lmpDate = lmp;
-  const addr = address;
+  const addr = address ? `${address}, Mapaya, San Jose, Occidental Mindoro` : "";
   const ag = age;
 
   // Validate user type
@@ -394,39 +394,43 @@ const handleSaveCheckup = async () => {
 
       {/* Active Users */}
       <h2>Active Users</h2>
-      <table className={styles.table} style={{ border: "1px solid #333" }}>
-        <thead style={{ backgroundColor: "#333", color: "#fff" }}>
-          <tr>
-            <th style={{ border: "1px solid #ccc" }}>Name</th>
-            <th style={{ border: "1px solid #ccc" }}>Phone Number</th>
-            <th style={{ border: "1px solid #ccc" }}>User Type</th>
-            <th style={{ border: "1px solid #ccc" }}>Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {filteredUsers.map((user) => (
-            <tr key={user.id}>
-              <td style={{ border: "1px solid #ccc" }}>{user.name}</td>
-              <td style={{ border: "1px solid #ccc" }}>{user.phone}</td>
-              <td style={{ border: "1px solid #ccc" }}>{user.type}</td>
-              <td style={{ border: "1px solid #ccc" }}>
-                <button
-                  style={{
-                    backgroundColor: "red",
-                    color: "#fff",
-                    border: "none",
-                    padding: "5px 10px",
-                    borderRadius: "5px",
-                  }}
-                  onClick={() => handleDisable(user)}
-                >
-                  Disable
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+     <table className={styles.table} style={{ border: "1px solid #333" }}>
+  <thead style={{ backgroundColor: "#333", color: "#fff" }}>
+    <tr>
+      <th style={{ border: "1px solid #ccc" }}>Name</th>
+      <th style={{ border: "1px solid #ccc" }}>Phone Number</th>
+      <th style={{ border: "1px solid #ccc" }}>Email</th>
+      <th style={{ border: "1px solid #ccc" }}>Address</th>
+      <th style={{ border: "1px solid #ccc" }}>User Type</th>
+      <th style={{ border: "1px solid #ccc" }}>Action</th>
+    </tr>
+  </thead>
+  <tbody>
+    {filteredUsers.map((user) => (
+      <tr key={user.id}>
+        <td style={{ border: "1px solid #ccc" }}>{user.name}</td>
+        <td style={{ border: "1px solid #ccc" }}>{user.phone}</td>
+        <td style={{ border: "1px solid #ccc" }}>{user.email || "—"}</td>
+        <td style={{ border: "1px solid #ccc" }}>{user.address || "—"}</td>
+        <td style={{ border: "1px solid #ccc" }}>{user.type}</td>
+        <td style={{ border: "1px solid #ccc" }}>
+          <button
+            style={{
+              backgroundColor: "red",
+              color: "#fff",
+              border: "none",
+              padding: "5px 10px",
+              borderRadius: "5px",
+            }}
+            onClick={() => handleDisable(user)}
+          >
+            Disable
+          </button>
+        </td>
+      </tr>
+    ))}
+  </tbody>
+</table>
       {filteredUsers.length > 0 ? (
   <p className={styles.resultsCount}>
     Showing {filteredUsers.length} result{filteredUsers.length !== 1 ? "s" : ""}
@@ -442,6 +446,8 @@ const handleSaveCheckup = async () => {
           <tr>
             <th>Name</th>
             <th>Phone Number</th>
+            <th>Email</th>
+            <th>Address</th>
             <th>User Type</th>
             <th>Action</th>
           </tr>
@@ -451,6 +457,8 @@ const handleSaveCheckup = async () => {
             <tr key={user.id}>
               <td>{user.name}</td>
               <td>{user.phone}</td>
+              <td>{user.email || "—"}</td>
+              <td>{user.address || "—"}</td>
               <td>{user.userType}</td>
               <td>
                 <button
@@ -486,6 +494,8 @@ const handleSaveCheckup = async () => {
           <tr>
             <th>Name</th>
             <th>Phone Number</th>
+            <th>Email</th>
+            <th>Address</th>
             <th>User Type</th>
             <th>Action</th>
           </tr>
@@ -495,6 +505,8 @@ const handleSaveCheckup = async () => {
             <tr key={user.id}>
               <td>{user.name}</td>
               <td>{user.phone}</td>
+              <td>{user.email || "—"}</td>
+              <td>{user.address || "—"}</td>
               <td>{user.userType}</td>
               <td>
                 <button
@@ -530,6 +542,8 @@ const handleSaveCheckup = async () => {
           <tr>
             <th>Name</th>
             <th>Phone Number</th>
+            <th>Email</th>
+            <th>Address</th>
             <th>User Type</th>
             <th>Action</th>
           </tr>
@@ -539,6 +553,8 @@ const handleSaveCheckup = async () => {
             <tr key={user.id}>
               <td>{user.name}</td>
               <td>{user.phone}</td>
+              <td>{user.email || "—"}</td>
+              <td>{user.address || "—"}</td>
               <td>{user.userType}</td>
               <td>
                 <button
@@ -787,14 +803,20 @@ const handleSaveCheckup = async () => {
       {errors.contact && <p className={styles.errorText}>{errors.contact}</p>}
     </label>
 
-    <label>
-      Address <span style={{ color: "red" }}>*</span>
-      <input
-        type="text"
+     <label>
+      Address (Barangay) <span style={{ color: "red" }}>*</span>
+      <select
         value={address}
         onChange={(e) => setAddress(e.target.value)}
         className={`${styles.input} ${errors.address ? styles.inputError : ""}`}
-      />
+      >
+        <option value="">Select Purok in Barangay Mapaya</option>
+        {addressList.map((barangay, index) => (
+          <option key={index} value={barangay}>
+            {barangay}
+          </option>
+        ))}
+      </select>
       {errors.address && <p className={styles.errorText}>{errors.address}</p>}
     </label>
 
@@ -870,13 +892,19 @@ const handleSaveCheckup = async () => {
     </label>
 
     <label>
-      Address <span style={{ color: "red" }}>*</span>
-      <input
-        type="text"
+      Address (Barangay) <span style={{ color: "red" }}>*</span>
+      <select
         value={address}
         onChange={(e) => setAddress(e.target.value)}
         className={`${styles.input} ${errors.address ? styles.inputError : ""}`}
-      />
+      >
+        <option value="">Select Purok in Barangay Mapaya</option>
+        {addressList.map((barangay, index) => (
+          <option key={index} value={barangay}>
+            {barangay}
+          </option>
+        ))}
+      </select>
       {errors.address && <p className={styles.errorText}>{errors.address}</p>}
     </label>
 
