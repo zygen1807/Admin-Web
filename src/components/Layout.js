@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import { FaSignOutAlt, FaUserCircle, FaBell } from "react-icons/fa";
+import { FaSignOutAlt, FaUserCircle, FaBell, FaCog } from "react-icons/fa";
 import Sidebar from "./Sidebar";
 import styles from "./Layout.module.css";
 
@@ -40,6 +40,9 @@ const Layout = () => {
     console.log("User logged out");
     navigate("/LandingPage");
   };
+  const handleSettings = () => {
+    navigate("/app/settings");
+  }
   
 
   // 🔹 Detect click outside dropdown
@@ -197,6 +200,9 @@ const filteredNotifs =
               </div>
               <button onClick={handleLogout} className={styles.dropdownItem}>
                 <FaSignOutAlt style={{ marginRight: "8px" }} /> Logout
+              </button>
+              <button onClick={handleSettings} className={styles.dropdownItem}>
+                <FaCog style={{ marginRight: "8px" }} /> Settings
               </button>
             </div>
           )}

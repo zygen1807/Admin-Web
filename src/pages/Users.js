@@ -57,6 +57,22 @@ const [checkupDate, setCheckupDate] = useState("");
     "Boundary",
   ]); // you can replace with your real barangay list
 
+  // Format date to "Month Day, Year" (e.g., January 18, 2003)
+const formatBirthDate = (dateString) => {
+  if (!dateString) return "—";
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "—"; // handle invalid date
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  } catch {
+    return "—";
+  }
+};
+
 
   const fetchUsers = async () => {
     const pregnantSnap = await getDocs(collection(db, "pregnant_users"));
@@ -400,6 +416,7 @@ const handleSaveCheckup = async () => {
       <th style={{ border: "1px solid #ccc" }}>Name</th>
       <th style={{ border: "1px solid #ccc" }}>Phone Number</th>
       <th style={{ border: "1px solid #ccc" }}>Email</th>
+      <th style={{ border: "1px solid #ccc" }}>Birth Date</th>
       <th style={{ border: "1px solid #ccc" }}>Address</th>
       <th style={{ border: "1px solid #ccc" }}>User Type</th>
       <th style={{ border: "1px solid #ccc" }}>Action</th>
@@ -411,6 +428,7 @@ const handleSaveCheckup = async () => {
         <td style={{ border: "1px solid #ccc" }}>{user.name}</td>
         <td style={{ border: "1px solid #ccc" }}>{user.phone}</td>
         <td style={{ border: "1px solid #ccc" }}>{user.email || "—"}</td>
+        <td style={{ border: "1px solid #ccc" }}>{formatBirthDate(user.birthDate)}</td>
         <td style={{ border: "1px solid #ccc" }}>{user.address || "—"}</td>
         <td style={{ border: "1px solid #ccc" }}>{user.type}</td>
         <td style={{ border: "1px solid #ccc" }}>
@@ -447,6 +465,7 @@ const handleSaveCheckup = async () => {
             <th>Name</th>
             <th>Phone Number</th>
             <th>Email</th>
+            <th>Birth Date</th>
             <th>Address</th>
             <th>User Type</th>
             <th>Action</th>
@@ -458,6 +477,7 @@ const handleSaveCheckup = async () => {
               <td>{user.name}</td>
               <td>{user.phone}</td>
               <td>{user.email || "—"}</td>
+               <td>{formatBirthDate(user.birthDate)}</td>
               <td>{user.address || "—"}</td>
               <td>{user.userType}</td>
               <td>
@@ -495,6 +515,7 @@ const handleSaveCheckup = async () => {
             <th>Name</th>
             <th>Phone Number</th>
             <th>Email</th>
+            <th>Birth Date</th>
             <th>Address</th>
             <th>User Type</th>
             <th>Action</th>
@@ -506,6 +527,7 @@ const handleSaveCheckup = async () => {
               <td>{user.name}</td>
               <td>{user.phone}</td>
               <td>{user.email || "—"}</td>
+               <td>{formatBirthDate(user.birthDate)}</td>
               <td>{user.address || "—"}</td>
               <td>{user.userType}</td>
               <td>
@@ -543,6 +565,7 @@ const handleSaveCheckup = async () => {
             <th>Name</th>
             <th>Phone Number</th>
             <th>Email</th>
+            <th>Birth Date</th>
             <th>Address</th>
             <th>User Type</th>
             <th>Action</th>
@@ -554,6 +577,7 @@ const handleSaveCheckup = async () => {
               <td>{user.name}</td>
               <td>{user.phone}</td>
               <td>{user.email || "—"}</td>
+               <td>{formatBirthDate(user.birthDate)}</td>
               <td>{user.address || "—"}</td>
               <td>{user.userType}</td>
               <td>
