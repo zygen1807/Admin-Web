@@ -30,6 +30,18 @@ ChartJS.register(
   ChartDataLabels
 );
 
+const formatDate = (date) => {
+  if (!date) return 'N/A';
+  const d = date instanceof Date ? date : new Date(date);
+  if (isNaN(d.getTime())) return 'N/A';
+  return d.toLocaleDateString('en-US', {
+    month: 'long', // full month name
+    day: 'numeric',
+    year: 'numeric',
+  });
+};
+
+
 const Dashboard = () => {
   const [pregnantUsersCount, setPregnantUsersCount] = useState(0);
   const [inactiveCount, setInactiveCount] = useState(0);
@@ -45,6 +57,9 @@ const Dashboard = () => {
   const [dueWeekPerMonth, setDueWeekPerMonth] = useState(new Array(12).fill(0));
   const [postpartumPerMonth, setPostpartumPerMonth] = useState(new Array(12).fill(0));
 const [currentDateTime, setCurrentDateTime] = useState(new Date());
+const [activeCard, setActiveCard] = useState(null); // holds label of the clicked card
+const [tableData, setTableData] = useState([]);
+
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -224,6 +239,75 @@ const [currentDateTime, setCurrentDateTime] = useState(new Date());
   });
 };
 
+const handleCardClick = async (label) => {
+  // Toggle logic: if same card clicked, hide table
+  if (activeCard === label) {
+    setActiveCard(null);
+    setTableData([]);
+    return;
+  }
+
+  setActiveCard(label); // show table for this card
+
+  let collectionName = '';
+  if (label === 'Total Active Pregnant Women') collectionName = 'pregnant_users';
+  else if (label === 'Total Inactive Pregnant Women') collectionName = 'pregnant_inactive';
+  else if (label === 'Pregnant Women in Due Week') collectionName = 'pregnant_trimester';
+  else if (label === 'Delivered Pregnant Women') collectionName = 'done_pregnants';
+
+  if (!collectionName) return;
+
+  try {
+    const snap = await getDocs(collection(db, collectionName));
+    const list = await Promise.all(
+      snap.docs.map(async (docItem) => {
+        const data = docItem.data();
+
+        // Always fetch the pregnant_users record if not coming from there
+        let userData = {};
+        if (collectionName !== 'pregnant_users') {
+          const userSnap = await getDocs(
+            query(collection(db, 'pregnant_users'), where('id', '==', docItem.id))
+          );
+          if (!userSnap.empty) {
+            userData = userSnap.docs[0].data();
+          }
+        } else {
+          userData = data;
+        }
+
+        // Fetch trimester data if exists
+        let lmp = data.lmp || userData.lmp || null;
+        let edc = data.edc || userData.edc || null;
+
+        if (!lmp || !edc) {
+          const trimesterSnap = await getDocs(
+            query(collection(db, 'pregnant_trimester'), where('patientId', '==', docItem.id))
+          );
+          const trimesterData = trimesterSnap.docs[0]?.data();
+          lmp = lmp || trimesterData?.lmp || null;
+          edc = edc || trimesterData?.edc || null;
+        }
+
+        return {
+          id: docItem.id,
+          name: userData.name || data.name || 'N/A',
+          address: userData.address || data.address || 'N/A',
+          birthDate: userData.birthDate || userData.birthdate || data.birthDate || 'N/A',
+          age: userData.age || data.age || 'N/A',
+          phoneNumber: userData.phone || data.phone || 'N/A',
+          lmp: lmp,
+          edc: edc,
+        };
+      })
+    );
+
+    setTableData(list);
+  } catch (err) {
+    console.error('Error fetching table data:', err);
+    setTableData([]);
+  }
+};
 
   return (
     <div className={styles.dashboard}>
@@ -251,16 +335,68 @@ const [currentDateTime, setCurrentDateTime] = useState(new Date());
 
       {/* ✅ Gradient Cards */}
       <div className={styles.cards}>
-        {stats.map((item, index) => (
-          <div key={index} className={`${styles.card} ${item.colorClass}`}>
-            <div className={styles.cardHeader}>
-              <p>{item.label}</p>
-              <span>{item.icon}</span>
-            </div>
-            <h2 className={styles.cardValue}>{item.value}</h2>
-          </div>
-        ))}
+  {stats.map((item, index) => (
+    <div
+      key={index}
+      className={`${styles.card} ${item.colorClass}`}
+      onClick={() => handleCardClick(item.label)} // 👈 add this
+      style={{ cursor: 'pointer' }}
+    >
+      <div className={styles.cardHeader}>
+        <p>{item.label}</p>
+        <span>{item.icon}</span>
       </div>
+      <h2 className={styles.cardValue}>{item.value}</h2>
+    </div>
+  ))}
+</div>
+
+{activeCard && (
+    <div className={styles.modal}>
+      <div className={styles.modalHeader}>
+        <h2>{activeCard}</h2>
+        <button onClick={() => setActiveCard(null)} className={styles.closeBtn}>✕</button>
+      </div>
+
+      <table className={styles.dataTable}>
+        <thead>
+          <tr>
+            <th>No.</th>
+            <th>Pregnant Name</th>
+            <th>Address</th>
+            <th>Birthdate</th>
+            <th>Age</th>
+            <th>Phone Number</th>
+            <th>LMP Date</th>
+            <th>EDC</th>
+          </tr>
+        </thead>
+        <tbody>
+          {tableData.length === 0 ? (
+            <tr>
+              <td colSpan="8" style={{ textAlign: 'center', padding: '20px' }}>
+                No records found.
+              </td>
+            </tr>
+          ) : (
+            tableData.map((item, index) => (
+              <tr key={item.id}>
+                <td>{index + 1}</td>
+                <td>{item.name || 'N/A'}</td>
+                <td>{item.address || 'N/A'}</td>
+                <td>{item.birthDate ? formatDate(item.birthDate) : 'N/A'}</td>
+                <td>{item.age || 'N/A'}</td>
+                <td>{item.phoneNumber || 'N/A'}</td>
+                <td>{item.lmp ? formatDate(item.lmp) : 'N/A'}</td>
+                <td>{item.edc ? formatDate(item.edc) : 'N/A'}</td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
+ 
+)}
 
       {/* ✅ Analytics Section */}
       <div className={styles.chartsSection}>
@@ -293,6 +429,8 @@ const [currentDateTime, setCurrentDateTime] = useState(new Date());
             </div>
           </div>
         </div>
+
+
 
         <div className={styles.chartCard}>
           <h2>Pregnant Users, Due Week & Postpartum Per Month</h2>

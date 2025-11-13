@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import styles from "./Users.module.css";
-import { FaSearch } from "react-icons/fa";
+import { FaSearch, FaEdit, FaKey, FaTrash  } from "react-icons/fa";
 import {
   getDocs,
   collection,
@@ -9,7 +9,7 @@ import {
   deleteDoc,
 } from "firebase/firestore";
 import { db, auth } from "../firebase";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, updatePassword, getAuth  } from "firebase/auth";
 
 const User = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -39,6 +39,63 @@ const [checkupDate, setCheckupDate] = useState("");
   const [birthDate, setBirthDate] = useState("");
   const [selectedUser, setSelectedUser] = useState(null);
   const [errors, setErrors] = useState({});
+// Password Recovery Modal
+const [showPasswordModal, setShowPasswordModal] = useState(false);
+const [passwordUser, setPasswordUser] = useState(null); // user to recover password for
+const [generatedPassword, setGeneratedPassword] = useState("");
+
+const handleOpenPasswordModal = (user) => {
+  setPasswordUser(user);
+  setGeneratedPassword(""); // reset previous password
+  setShowPasswordModal(true);
+};
+
+const handleClosePasswordModal = () => {
+  setShowPasswordModal(false);
+  setPasswordUser(null);
+  setGeneratedPassword("");
+};
+
+const generateDefaultPassword = () => {
+  if (!passwordUser) return;
+  const firstName = passwordUser.name?.split(" ")[0]?.toLowerCase() || "user";
+  const newPassword = `${firstName}123`;
+  setGeneratedPassword(newPassword);
+};
+
+const handleSavePassword = async () => {
+  if (!generatedPassword || !passwordUser) {
+    alert("Please generate a password first!");
+    return;
+  }
+
+  try {
+    // Update Firestore document
+    const collectionName =
+      passwordUser.type === "Pregnant Women"
+        ? "pregnant_users"
+        : passwordUser.type === "BHW"
+        ? "bhw_users"
+        : "rescuer_users";
+
+    await setDoc(
+      doc(db, collectionName, passwordUser.id),
+      { password: generatedPassword }, // optional: store password in Firestore if needed
+      { merge: true }
+    );
+
+    // Optional: Update password in Firebase Auth
+    // WARNING: Firebase Auth does not allow updating other user's password directly in client-side
+    // For production, you'd need Firebase Admin SDK or send password reset email.
+    // For now, you can just alert the generated password
+
+    alert(`Password updated for ${passwordUser.name}:\n${generatedPassword}`);
+    handleClosePasswordModal();
+  } catch (err) {
+    console.error("Password Recovery Error:", err);
+    alert("Failed to update password. See console for details.");
+  }
+};
 
   // added: when enabling from inactive, open modal to edit and preserve id
   const [isEnabling, setIsEnabling] = useState(false);
@@ -375,6 +432,48 @@ const handleSaveCheckup = async () => {
   }
 };
 
+const handleEdit = (user) => {
+  const nameParts = (user.name || "").split(" ");
+  setSelectedUser(user);
+  setUserType(user.type || "Pregnant Women");
+  setFirstName(nameParts[0] || "");
+  setMiddleName(nameParts.length > 2 ? nameParts.slice(1, -1).join(" ") : "");
+  setLastName(nameParts.length > 1 ? nameParts[nameParts.length - 1] : "");
+  setContact(user.phone || "");
+  setEmail(user.email || "");
+  setAddress(user.address || "");
+  setAge(user.age || "");
+  setLmp(user.lmp || "");
+  setBirthDate(user.birthDate || "");
+
+  setIsEnabling(false); // Not enabling inactive
+  setShowModal(true);
+};
+
+const handlePasswordRecovery = (user) => {
+  const firstName = (user.name || "").split(" ")[0].toLowerCase();
+  const defaultPassword = `${firstName}123`;
+  setSelectedUser(user);
+  setGeneratedPassword(defaultPassword);
+  setShowPasswordModal(true);
+};
+
+const handleDelete = async (user) => {
+  const confirmDelete = window.confirm(`Permanently delete ${user.name}?`);
+  if (!confirmDelete) return;
+
+  try {
+    // Delete from Firestore
+    await deleteDoc(doc(db, user.collection, user.id));
+    alert(`${user.name} has been permanently deleted.`);
+    fetchUsers(); // Refresh table
+  } catch (error) {
+    console.error("Delete Error:", error);
+    alert("Failed to delete user. See console for details.");
+  }
+};
+
+
   return (
     <div className={styles.container}>
          <div className={styles.cardFull}>
@@ -431,20 +530,40 @@ const handleSaveCheckup = async () => {
         <td style={{ border: "1px solid #ccc" }}>{formatBirthDate(user.birthDate)}</td>
         <td style={{ border: "1px solid #ccc" }}>{user.address || "—"}</td>
         <td style={{ border: "1px solid #ccc" }}>{user.type}</td>
-        <td style={{ border: "1px solid #ccc" }}>
-          <button
-            style={{
-              backgroundColor: "red",
-              color: "#fff",
-              border: "none",
-              padding: "5px 10px",
-              borderRadius: "5px",
-            }}
-            onClick={() => handleDisable(user)}
-          >
-            Disable
-          </button>
-        </td>
+       <td className={styles.actionIcons}>
+  <button
+    style={{
+      backgroundColor: "red",
+      color: "#fff",
+      border: "none",
+      padding: "5px",
+      borderRadius: "5px",
+      marginRight: "10px"
+    }}
+    onClick={() => handleDisable(user)}
+    title="Disable"
+  >
+    Disable
+  </button>
+
+  <FaEdit
+    style={{ cursor: "pointer", marginRight: "10px", color: "#007e96"}}
+    title="Edit"
+    onClick={() => handleEdit(user)}
+  />
+
+  <FaKey
+    style={{ cursor: "pointer", marginRight: "10px" , color: "#ebef9eff" }}
+    title="Password Recovery"
+     onClick={() => handleOpenPasswordModal(user)}
+  />
+
+  <FaTrash
+    style={{ cursor: "pointer", color: "#81888aff" }}
+    title="Delete"
+    onClick={() => handleDelete(user)}
+  />
+</td>
       </tr>
     ))}
   </tbody>
@@ -480,7 +599,7 @@ const handleSaveCheckup = async () => {
                <td>{formatBirthDate(user.birthDate)}</td>
               <td>{user.address || "—"}</td>
               <td>{user.userType}</td>
-              <td>
+              <td className={styles.actionIcons}>
                 <button
                   style={{
                     backgroundColor: "green",
@@ -493,6 +612,23 @@ const handleSaveCheckup = async () => {
                 >
                   Enable
                 </button>
+                <FaEdit
+    style={{ cursor: "pointer", marginRight: "10px", color: "#007e96"}}
+    title="Edit"
+    onClick={() => handleEdit(user)}
+  />
+
+  <FaKey
+    style={{ cursor: "pointer", marginRight: "10px" , color: "#ebef9eff" }}
+    title="Password Recovery"
+     onClick={() => handleOpenPasswordModal(user)}
+  />
+
+  <FaTrash
+    style={{ cursor: "pointer", color: "#81888aff" }}
+    title="Delete"
+    onClick={() => handleDelete(user)}
+  />
               </td>
             </tr>
           ))}
@@ -530,7 +666,7 @@ const handleSaveCheckup = async () => {
                <td>{formatBirthDate(user.birthDate)}</td>
               <td>{user.address || "—"}</td>
               <td>{user.userType}</td>
-              <td>
+              <td className={styles.actionIcons}>
                 <button
                   style={{
                     backgroundColor: "green",
@@ -543,6 +679,23 @@ const handleSaveCheckup = async () => {
                 >
                   Enable
                 </button>
+                <FaEdit
+    style={{ cursor: "pointer", marginRight: "10px", color: "#007e96"}}
+    title="Edit"
+    onClick={() => handleEdit(user)}
+  />
+
+  <FaKey
+    style={{ cursor: "pointer", marginRight: "10px" , color: "#ebef9eff" }}
+    title="Password Recovery"
+     onClick={() => handleOpenPasswordModal(user)}
+  />
+
+  <FaTrash
+    style={{ cursor: "pointer", color: "#81888aff" }}
+    title="Delete"
+    onClick={() => handleDelete(user)}
+  />
               </td>
             </tr>
           ))}
@@ -580,7 +733,7 @@ const handleSaveCheckup = async () => {
                <td>{formatBirthDate(user.birthDate)}</td>
               <td>{user.address || "—"}</td>
               <td>{user.userType}</td>
-              <td>
+              <td className={styles.actionIcons}>
                 <button
                   style={{
                     backgroundColor: "green",
@@ -593,6 +746,23 @@ const handleSaveCheckup = async () => {
                 >
                   Enable
                 </button>
+                <FaEdit
+    style={{ cursor: "pointer", marginRight: "10px", color: "#007e96"}}
+    title="Edit"
+    onClick={() => handleEdit(user)}
+  />
+
+  <FaKey
+    style={{ cursor: "pointer", marginRight: "10px" , color: "#ebef9eff" }}
+    title="Password Recovery"
+     onClick={() => handleOpenPasswordModal(user)}
+  />
+
+  <FaTrash
+    style={{ cursor: "pointer", color: "#81888aff" }}
+    title="Delete"
+    onClick={() => handleDelete(user)}
+  />
               </td>
             </tr>
           ))}
@@ -642,6 +812,60 @@ const handleSaveCheckup = async () => {
           onClick={handleSaveCheckup}
         >
           Save
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+{showPasswordModal && passwordUser && (
+  <div className={styles.modalOverlay}>
+    <div className={styles.modal}>
+      <button className={styles.modalClose} onClick={handleClosePasswordModal}>
+        &times;
+      </button>
+
+      <h3>Password Recovery for {passwordUser.name}</h3>
+
+      <label>
+        Generated Password:
+        <input
+          type="text"
+          value={generatedPassword}
+          readOnly
+          className={styles.input}
+        />
+      </label>
+
+      <div className={styles.modalFooter}>
+        <button className={styles.buttonAdd} onClick={generateDefaultPassword}>
+          Generate
+        </button>
+        <button className={styles.buttonAdd} onClick={handleSavePassword}>
+          Save
+        </button>
+        <button className={styles.buttonCancel} onClick={handleClosePasswordModal}>
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+{showPasswordModal && selectedUser && (
+  <div className={styles.modalOverlay}>
+    <div className={styles.modal}>
+      <button className={styles.modalClose} onClick={() => setShowPasswordModal(false)}>
+        &times;
+      </button>
+      <h3>Password Recovery for {selectedUser.name}</h3>
+      <label>
+        Generated Password:
+        <input type="text" value={generatedPassword} readOnly className={styles.input} />
+      </label>
+      <div className={styles.modalFooter}>
+        <button className={styles.buttonCancel} onClick={() => setShowPasswordModal(false)}>
+          Close
         </button>
       </div>
     </div>

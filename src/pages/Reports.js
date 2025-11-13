@@ -107,36 +107,50 @@ const Reports = () => {
         const deliveredSnap = await getDocs(collection(db, 'done_pregnants'));
         const deliveredList = [];
 
-        for (let docSnap of deliveredSnap.docs) {
-          const user = { id: docSnap.id, ...docSnap.data() };
+       for (let docSnap of deliveredSnap.docs) {
+  const user = { id: docSnap.id, ...docSnap.data() };
 
-          // Fetch patient details from pregnant_users
-          const userDoc = await getDoc(doc(db, 'pregnant_users', user.id));
-          const userData = userDoc.exists() ? userDoc.data() : {};
+  // Fetch patient details from pregnant_users
+  const userDoc = await getDoc(doc(db, 'pregnant_users', user.id));
+  const userData = userDoc.exists() ? userDoc.data() : {};
 
-          // Fetch EDC from pregnant_trimester
-          const trimesterSnap = await getDocs(
-            query(
-              collection(db, 'pregnant_trimester'),
-              where('patientId', '==', user.id)
-            )
-          );
-          const trimesterData = trimesterSnap.docs[0]?.data();
+  // Fetch EDC from pregnant_trimester
+  const trimesterSnap = await getDocs(
+    query(
+      collection(db, 'pregnant_trimester'),
+      where('patientId', '==', user.id)
+    )
+  );
+  const trimesterData = trimesterSnap.docs[0]?.data();
 
-          // Combine all info
-          deliveredList.push({
-            id: user.id,
-            name: userData.name || '—',
-            address: userData.address || '—',
-            birthDate: formatDate(userData.birthDate),
-            age: userData.age || '—',
-            phone: userData.phone || '—',
-            lmp: userData.lmp ? formatDate(userData.lmp) : 'N/A',
-            edc: trimesterData?.edc ? formatDate(trimesterData.edc) : 'N/A',
-            deliveredAt: user.deliveredAt ? formatDate(user.deliveredAt) : 'N/A', // Date Delivered
-            timestamp: user.timestamp || user.deliveredAt || null, // for filtering
-          });
-        }
+  // Combine all info
+  deliveredList.push({
+    id: user.id,
+    name: userData.name || '—',
+    address: userData.address || '—',
+    birthDate: formatDate(userData.birthDate),
+    age: userData.age || '—',
+    phone: userData.phone || '—',
+    lmp: userData.lmp ? formatDate(userData.lmp) : 'N/A',
+    edc: trimesterData?.edc ? formatDate(trimesterData.edc) : 'N/A',
+    centerName: user.center_name || '—', 
+
+    // ✅ Convert Firestore Timestamp to JS Date before formatting
+    deliveredAt: user.deliveredAt
+      ? formatDate(user.deliveredAt.toDate ? user.deliveredAt.toDate() : user.deliveredAt)
+      : 'N/A', // Date Delivered
+
+    timestamp: user.timestamp
+      ? user.timestamp.toDate
+        ? user.timestamp.toDate()
+        : user.timestamp
+      : user.deliveredAt
+      ? user.deliveredAt.toDate
+        ? user.deliveredAt.toDate()
+        : user.deliveredAt
+      : null, // for filtering
+  });
+}
 
         const filteredDelivered = filterByDateRange(
           deliveredList,
@@ -223,11 +237,13 @@ const Reports = () => {
       u.phone || 'N/A',
       u.lmp || 'N/A',
       u.edc || 'N/A',
+      u.centerName || 'N/A',
+      u.deliveredAt || 'N/A',
     ]);
 
     autoTable(doc, {
       startY: 40,
-      head: [['No.', 'Patient Name', 'Address', 'Birthdate', 'Age', 'Phone Number', 'LMP Date', 'EDC']],
+      head: [['No.', 'Patient Name', 'Address', 'Birthdate', 'Age', 'Phone Number', 'LMP Date', 'EDC', 'Center Name', 'Date Delivered']],
       body: tableData,
       styles: { fontSize: 9, cellPadding: 2 },
       headStyles: { fillColor: [41, 128, 185], halign: 'center' },
@@ -389,13 +405,15 @@ const Reports = () => {
           <thead>
             <tr>
               <th>No.</th>
-              <th>Patient Name</th>
+              <th>Pregnant Name</th>
               <th>Address</th>
               <th>Birthdate</th>
               <th>Age</th>
               <th>Phone Number</th>
               <th>LMP Date</th>
               <th>EDC</th>
+              <th>Center Name</th>
+              <th>Date Delivered</th>
             </tr>
           </thead>
           <tbody>
@@ -409,6 +427,8 @@ const Reports = () => {
                 <td>{u.phone}</td>
                 <td>{u.lmp}</td>
                 <td>{u.edc}</td>
+                <td>{u.centerName}</td>
+                <td>{u.deliveredAt}</td>
               </tr>
             ))}
           </tbody>
@@ -419,7 +439,7 @@ const Reports = () => {
           <thead>
             <tr>
               <th>No.</th>
-              <th>Patient Name</th>
+              <th>Pregnant Name</th>
               <th>Address</th>
               <th>Birthdate</th>
               <th>Age</th>

@@ -1,0 +1,90 @@
+.container {
+  padding: 20px;
+  font-family: "Poppins", sans-serif;
+  color: #2c3e50;
+}
+
+.cardFull {
+  background: #fff;
+  border-radius: 10px;
+  padding: 25px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.header h1 {
+  font-size: 22px;
+  font-weight: 600;
+  color: #34495e;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.searchInput {
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  width: 240px;
+  font-size: 14px;
+  transition: 0.2s ease-in-out;
+}
+
+.searchInput:focus {
+  border-color: #3498db;
+  outline: none;
+  box-shadow: 0 0 4px rgba(52, 152, 219, 0.4);
+}
+
+.generateBtn {
+  background-color: #27ae60;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: 0.2s;
+}
+
+.generateBtn:hover {
+  background-color: #219150;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.table th {
+  background-color: #3498db;
+  color: white;
+  text-align: center;
+  padding: 10px;
+  font-weight: 500;
+}
+
+.table td {
+  text-align: center;
+  padding: 8px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.table tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.table tr:hover {
+  background-color: #f1f1f1;
+  transition: 0.2s;
+}

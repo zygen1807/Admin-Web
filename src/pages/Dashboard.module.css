@@ -15,6 +15,27 @@
   border-radius: 0.75rem;
   padding: 1.5rem;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+
+  width: 100%;       /* ✅ full width */
+  max-width: 100%;   /* remove any limiting max-width */
+  margin-left: 0;    /* align to container */
+  margin-right: 0;
+}
+
+.modal {
+  background: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  margin-top: 20px; 
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+
+  width: 96%;       /* ✅ full width of parent cardFull */
+  max-width: 100%;   /* no fixed width */
+  margin-left: 0;
+  margin-right: 0;
+
+  max-height: 600px;
+  overflow-y: auto;
 }
 
 /* === Title Section === */
@@ -185,4 +206,54 @@
   .timeText {
     font-size: 18px;
   }
+}
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999; /* ✅ Make sure it is above everything */
+}
+
+.closeBtn {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  float: right;
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+.modalHeader h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #007e96;
+}
+
+.dataTable {
+  width: 100%;        /* ✅ stretch full container */
+  border-collapse: collapse;
+  table-layout: auto; /* allow columns to stretch naturally */
+}
+
+.dataTable th, .dataTable td {
+  border: 1px solid #ccc;
+  padding: 8px;
+  text-align: left;
+}
+
+
+.dataTable th {
+  background: #007e96;
+  font-weight: bold;
 }

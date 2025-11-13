@@ -14,6 +14,7 @@ import AdminPendingUsers from './pages/AdminPendingUsers';
 import AdminNotifications from './pages/AdminNotifications';
 import AdminNotificationWatcher from './pages/AdminNotificationWatcher';
 import LandingPage from './components/LandingPage';
+import ArchiveRecords from './pages/Archive_Records';
 
 function App() {
   return (
@@ -37,6 +38,7 @@ function App() {
           <Route path="settings" element={<Settings />} />
           <Route path="AdminNotifications" element={<AdminNotifications />} />         
           <Route path="AdminNotificationWatcher" element={<AdminNotificationWatcher />} />
+          <Route path="archive_records" element={<ArchiveRecords />} />
         </Route>
       </Routes>
     </Router>

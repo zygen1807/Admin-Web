@@ -446,3 +446,16 @@
   font-size: 12px;
   margin-top: 6px;
 }
+.actionIcons {
+  display: flex;
+  align-items: center;
+  color: #007e96;
+}
+.actionIcons svg {
+  margin-right: 5px;
+  cursor: pointer;
+  color: #333;
+}
+.actionIcons svg:hover {
+  color: #007bff;
+}

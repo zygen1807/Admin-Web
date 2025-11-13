@@ -66,6 +66,10 @@ const Layout = () => {
     else if (path.includes("users")) setPageTitle("User Management");
     else if (path.includes("settings")) setPageTitle("Account Settings");
     else if (path.includes("landingpage")) setPageTitle("LandingPage");
+    else if (path.includes("assignpregnantbhw")) setPageTitle("Assign Pregnant BHW");
+    else if (path.includes("adminnotifications")) setPageTitle("Admin Notifications");
+    else if (path.includes("adminnotificationwatcher")) setPageTitle("Admin Notification Watcher");
+    else if (path.includes("archive_records")) setPageTitle("Pregnant Archived Records");
     else setPageTitle("Dashboard");
   }, [location]);
 

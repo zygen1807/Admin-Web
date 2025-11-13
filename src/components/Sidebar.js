@@ -6,7 +6,8 @@ import {
   FaCog,
   FaFileAlt,
   FaUserPlus,
-  FaBell
+  FaBell,
+  FaFolder
 } from "react-icons/fa";
 import styles from "./Sidebar.module.css";
 import { auth } from "../firebase";
@@ -100,11 +101,7 @@ const Sidebar = ({ open }) => {
             <FaUsers className={styles.icon} />
             {open && <span className={styles.label}>User Management</span>}
           </NavLink>
-
-          <NavLink to="/app/settings" className={linkStyle}>
-            <FaCog className={styles.icon} />
-            {open && <span className={styles.label}>Account Settings</span>}
-          </NavLink>
+         
         </nav>
       </aside>
 
