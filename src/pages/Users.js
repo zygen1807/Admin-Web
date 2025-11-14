@@ -9,7 +9,17 @@ import {
   deleteDoc,
 } from "firebase/firestore";
 import { db, auth } from "../firebase";
-import { createUserWithEmailAndPassword, updatePassword, getAuth  } from "firebase/auth";
+import { createUserWithEmailAndPassword, updatePassword, getAuth, sendPasswordResetEmail  } from "firebase/auth";
+
+const handlePasswordRecovery = async (user) => {
+  try {
+    await sendPasswordResetEmail(auth, user.email);
+    alert("Password reset email sent to: " + user.email);
+  } catch (err) {
+    console.error(err);
+    alert("Error sending reset email.");
+  }
+};
 
 const User = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -43,11 +53,12 @@ const [checkupDate, setCheckupDate] = useState("");
 const [showPasswordModal, setShowPasswordModal] = useState(false);
 const [passwordUser, setPasswordUser] = useState(null); // user to recover password for
 const [generatedPassword, setGeneratedPassword] = useState("");
+const [showPassModal, setShowPassModal] = useState(false);
+const [selectedPasswordUser, setSelectedPasswordUser] = useState(null);
 
 const handleOpenPasswordModal = (user) => {
-  setPasswordUser(user);
-  setGeneratedPassword(""); // reset previous password
-  setShowPasswordModal(true);
+  setSelectedPasswordUser(user);
+  setShowPassModal(true);
 };
 
 const handleClosePasswordModal = () => {
@@ -353,6 +364,30 @@ if (isEnabling && selectedUser) {
   return;
 }
 
+if (selectedUser && !isEnabling) {
+  const fullName = `${fn} ${mn} ${ln}`;
+
+  await setDoc(
+    doc(db, selectedUser.collection, selectedUser.id),
+    {
+      name: fullName,
+      phone: ph,
+      email: em,
+      age: ag,
+      address: addr,
+      birthDate: bd,
+      lmp: lmpDate,
+      updatedAt: new Date(),
+    },
+    { merge: true }
+  );
+
+  alert("User information updated!");
+  setShowModal(false);
+  fetchUsers();
+  return;
+}
+
   // --- Continue creating new user (unchanged logic) ---
   const autoPassword = bd
     ? (() => {
@@ -538,7 +573,7 @@ const handleDelete = async (user) => {
       border: "none",
       padding: "5px",
       borderRadius: "5px",
-      marginRight: "10px"
+      marginRight: "20px"
     }}
     onClick={() => handleDisable(user)}
     title="Disable"
@@ -552,7 +587,7 @@ const handleDelete = async (user) => {
     onClick={() => handleEdit(user)}
   />
 
-  <FaKey
+  {/*<FaKey
     style={{ cursor: "pointer", marginRight: "10px" , color: "#ebef9eff" }}
     title="Password Recovery"
      onClick={() => handleOpenPasswordModal(user)}
@@ -562,7 +597,7 @@ const handleDelete = async (user) => {
     style={{ cursor: "pointer", color: "#81888aff" }}
     title="Delete"
     onClick={() => handleDelete(user)}
-  />
+  />*/}
 </td>
       </tr>
     ))}
@@ -818,54 +853,32 @@ const handleDelete = async (user) => {
   </div>
 )}
 
-{showPasswordModal && passwordUser && (
-  <div className={styles.modalOverlay}>
-    <div className={styles.modal}>
-      <button className={styles.modalClose} onClick={handleClosePasswordModal}>
-        &times;
-      </button>
+{showPassModal && (
+  <div className={styles.modalBackdrop}>
+    <div className={styles.modalContent}>
+      <h3>Send Password Reset Email?</h3>
+      <p>
+        Are you sure you want to send a reset email to:
+        <br />
+        <b>{selectedPasswordUser?.email}</b>
+      </p>
 
-      <h3>Password Recovery for {passwordUser.name}</h3>
-
-      <label>
-        Generated Password:
-        <input
-          type="text"
-          value={generatedPassword}
-          readOnly
-          className={styles.input}
-        />
-      </label>
-
-      <div className={styles.modalFooter}>
-        <button className={styles.buttonAdd} onClick={generateDefaultPassword}>
-          Generate
+      <div className={styles.modalButtons}>
+        <button
+          className={styles.confirmBtn}
+          onClick={() => {
+            handlePasswordRecovery(selectedPasswordUser);
+            setShowPassModal(false);
+          }}
+        >
+          Yes, Send Email
         </button>
-        <button className={styles.buttonAdd} onClick={handleSavePassword}>
-          Save
-        </button>
-        <button className={styles.buttonCancel} onClick={handleClosePasswordModal}>
+
+        <button
+          className={styles.cancelBtn}
+          onClick={() => setShowPassModal(false)}
+        >
           Cancel
-        </button>
-      </div>
-    </div>
-  </div>
-)}
-
-{showPasswordModal && selectedUser && (
-  <div className={styles.modalOverlay}>
-    <div className={styles.modal}>
-      <button className={styles.modalClose} onClick={() => setShowPasswordModal(false)}>
-        &times;
-      </button>
-      <h3>Password Recovery for {selectedUser.name}</h3>
-      <label>
-        Generated Password:
-        <input type="text" value={generatedPassword} readOnly className={styles.input} />
-      </label>
-      <div className={styles.modalFooter}>
-        <button className={styles.buttonCancel} onClick={() => setShowPasswordModal(false)}>
-          Close
         </button>
       </div>
     </div>
