@@ -15,6 +15,12 @@ import AdminNotifications from './pages/AdminNotifications';
 import AdminNotificationWatcher from './pages/AdminNotificationWatcher';
 import LandingPage from './components/LandingPage';
 import ArchiveRecords from './pages/Archive_Records';
+import DeliveredReports from "./pages/DeliveredReports";
+import HealthStatus from "./pages/HealthStatus";
+import DueWeekReports from "./pages/DueWeekReports";
+import TotalPregnant from "./pages/TotalPregnant";
+import LaborStatusReports from "./pages/LaborStatusReports";
+
 
 function App() {
   return (
@@ -39,6 +45,11 @@ function App() {
           <Route path="AdminNotifications" element={<AdminNotifications />} />         
           <Route path="AdminNotificationWatcher" element={<AdminNotificationWatcher />} />
           <Route path="archive_records" element={<ArchiveRecords />} />
+          <Route path="DeliveredReports" element={<DeliveredReports />} />
+          <Route path="HealthStatus" element={< HealthStatus />} /> 
+          <Route path="DueWeekReports" element={< DueWeekReports />} /> 
+          <Route path="TotalPregnant" element={< TotalPregnant />} /> 
+          <Route path="LaborStatusReports" element={< LaborStatusReports />} /> 
         </Route>
       </Routes>
     </Router>

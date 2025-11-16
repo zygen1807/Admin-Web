@@ -17,48 +17,33 @@ import autoTable from 'jspdf-autotable';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 
+const monthOrder = ["01","02","03","04","05","06","07","08","09","10","11","12"];
+
+const monthNames = {
+  "01": "January",
+  "02": "February",
+  "03": "March",
+  "04": "April",
+  "05": "May",
+  "06": "June",
+  "07": "July",
+  "08": "August",
+  "09": "September",
+  "10": "October",
+  "11": "November",
+  "12": "December",
+};
+
 const Reports = () => {
   const [bhwData, setBhwData] = useState([]);
   const [pregnantData, setPregnantData] = useState([]);
   const [filter, setFilter] = useState('This Month');
   const [customStartDate, setCustomStartDate] = useState(null);
   const [customEndDate, setCustomEndDate] = useState(null);
+  const [selectedMonth, setSelectedMonth] = useState(""); // ✅ added state
   const [showModal, setShowModal] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [checkupRecords, setCheckupRecords] = useState([]);
-  const [deliveredUsers, setDeliveredUsers] = useState([]);
-
-  const filterByDateRange = (activities, filter, startDate, endDate) => {
-    const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
-    const lastMonthDate = new Date(currentYear, currentMonth - 1, 1);
-
-    return activities.filter((item) => {
-      if (!item.timestamp) return false;
-      const itemDate = new Date(item.timestamp);
-      const itemMonth = itemDate.getMonth();
-      const itemYear = itemDate.getFullYear();
-
-      if (filter === 'This Month') {
-        return itemMonth === currentMonth && itemYear === currentYear;
-      } else if (filter === 'Last Month') {
-        return (
-          itemMonth === lastMonthDate.getMonth() &&
-          itemYear === lastMonthDate.getFullYear()
-        );
-      } else if (filter === 'Custom Range' && startDate && endDate) {
-        // normalize times for inclusive comparison
-        const start = new Date(startDate);
-        start.setHours(0, 0, 0, 0);
-        const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999);
-        return itemDate >= start && itemDate <= end;
-      }
-
-      return true;
-    });
-  };
 
   const formatDate = (date) => {
     if (!date) return 'N/A';
@@ -74,14 +59,12 @@ const Reports = () => {
   useEffect(() => {
     const fetchSummaryData = async () => {
       try {
-        // --- 1️⃣ Active Pregnant Women ---
         const activeSnap = await getDocs(collection(db, 'pregnant_users'));
         const activeList = [];
 
         for (let docSnap of activeSnap.docs) {
           const user = { id: docSnap.id, ...docSnap.data() };
 
-          // Fetch EDC from pregnant_trimester
           const trimesterSnap = await getDocs(
             query(
               collection(db, 'pregnant_trimester'),
@@ -96,69 +79,11 @@ const Reports = () => {
 
           activeList.push({
             ...user,
-            // keep formatted fields for display (but keep original data too)
             birthDate: formatDate(user.birthDate),
             lmp: user.lmp ? formatDate(user.lmp) : 'N/A',
             edc: user.edc ? formatDate(user.edc) : 'N/A',
           });
         }
-
-        // --- 4️⃣ Delivered Pregnant Women ---
-        const deliveredSnap = await getDocs(collection(db, 'done_pregnants'));
-        const deliveredList = [];
-
-       for (let docSnap of deliveredSnap.docs) {
-  const user = { id: docSnap.id, ...docSnap.data() };
-
-  // Fetch patient details from pregnant_users
-  const userDoc = await getDoc(doc(db, 'pregnant_users', user.id));
-  const userData = userDoc.exists() ? userDoc.data() : {};
-
-  // Fetch EDC from pregnant_trimester
-  const trimesterSnap = await getDocs(
-    query(
-      collection(db, 'pregnant_trimester'),
-      where('patientId', '==', user.id)
-    )
-  );
-  const trimesterData = trimesterSnap.docs[0]?.data();
-
-  // Combine all info
-  deliveredList.push({
-    id: user.id,
-    name: userData.name || '—',
-    address: userData.address || '—',
-    birthDate: formatDate(userData.birthDate),
-    age: userData.age || '—',
-    phone: userData.phone || '—',
-    lmp: userData.lmp ? formatDate(userData.lmp) : 'N/A',
-    edc: trimesterData?.edc ? formatDate(trimesterData.edc) : 'N/A',
-    centerName: user.center_name || '—', 
-
-    // ✅ Convert Firestore Timestamp to JS Date before formatting
-    deliveredAt: user.deliveredAt
-      ? formatDate(user.deliveredAt.toDate ? user.deliveredAt.toDate() : user.deliveredAt)
-      : 'N/A', // Date Delivered
-
-    timestamp: user.timestamp
-      ? user.timestamp.toDate
-        ? user.timestamp.toDate()
-        : user.timestamp
-      : user.deliveredAt
-      ? user.deliveredAt.toDate
-        ? user.deliveredAt.toDate()
-        : user.deliveredAt
-      : null, // for filtering
-  });
-}
-
-        const filteredDelivered = filterByDateRange(
-          deliveredList,
-          filter,
-          customStartDate,
-          customEndDate
-        );
-        setDeliveredUsers(filteredDelivered);
       } catch (err) {
         console.error('Error fetching summary data:', err);
       }
@@ -174,34 +99,46 @@ const Reports = () => {
           usersMap[u.id] = { id: u.id, ...u.data() };
         });
 
-        const combinedData = trimesterSnap.docs.map((docItem) => {
+        let combinedData = trimesterSnap.docs.map((docItem) => {
           const trimesterData = docItem.data();
           const userInfo = usersMap[trimesterData.patientId] || {};
+
+          const edcFormatted = trimesterData.edc ? formatDate(trimesterData.edc) : 'N/A';
+          const lmpFormatted = trimesterData.lmp ? formatDate(trimesterData.lmp) : 'N/A';
+          const birthdateFormatted = userInfo.birthDate ? formatDate(userInfo.birthDate) : 'N/A';
+
+          // ✅ filter by selectedMonth
+          if (selectedMonth) {
+            const edcDate = trimesterData.edc?.toDate ? trimesterData.edc.toDate() : new Date(trimesterData.edc);
+            const month = String(edcDate.getMonth() + 1).padStart(2, '0');
+            if (month !== selectedMonth) return null; // skip this user if not in selected month
+          }
 
           return {
             id: docItem.id,
             patientId: trimesterData.patientId,
             patientName: userInfo.name || '',
-            lmp: trimesterData.lmp ? formatDate(trimesterData.lmp) : 'N/A',
-            edc: trimesterData.edc ? formatDate(trimesterData.edc) : 'N/A',
+            lmp: lmpFormatted,
+            edc: edcFormatted,
             bmi: trimesterData.bmi || '',
             address: userInfo.address || '',
-            birthdate: userInfo.birthDate ? formatDate(userInfo.birthDate) : 'N/A',
+            birthdate: birthdateFormatted,
             age: userInfo.age || '',
             phoneNumber: userInfo.phone || '',
           };
         });
 
+        // remove nulls from filtering
+        combinedData = combinedData.filter((u) => u !== null);
         setPregnantData(combinedData);
       } catch (err) {
         console.error('Error fetching pregnant data:', err);
       }
     };
 
-    // Call both fetchers in parallel
     fetchSummaryData();
     fetchPregnantData();
-  }, [filter, customStartDate, customEndDate]);
+  }, [filter, customStartDate, customEndDate, selectedMonth]); // ✅ added selectedMonth
 
   const incrementReportCount = async () => {
     const countDocRef = doc(db, 'report_stats', 'generated');
@@ -215,43 +152,6 @@ const Reports = () => {
         await setDoc(countDocRef, { count: 1 });
       }
     }
-  };
-
-  const generateSummaryPdf = (data, filename, tableTitle = 'Pregnant Women Report') => {
-    if (!data || data.length === 0) return;
-
-    const doc = new jsPDF();
-    doc.setFontSize(14);
-
-    // Header format like BHW report
-    doc.text('Province of Occidental Mindoro', doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
-    doc.text('Municipality of San Jose', doc.internal.pageSize.getWidth() / 2, 23, { align: 'center' });
-    doc.text(tableTitle, doc.internal.pageSize.getWidth() / 2, 31, { align: 'center' });
-
-    const tableData = data.map((u, i) => [
-      i + 1,
-      u.patientName || u.name || 'N/A',
-      u.address || 'N/A',
-      u.birthDate || 'N/A',
-      u.age || 'N/A',
-      u.phone || 'N/A',
-      u.lmp || 'N/A',
-      u.edc || 'N/A',
-      u.centerName || 'N/A',
-      u.deliveredAt || 'N/A',
-    ]);
-
-    autoTable(doc, {
-      startY: 40,
-      head: [['No.', 'Patient Name', 'Address', 'Birthdate', 'Age', 'Phone Number', 'LMP Date', 'EDC', 'Center Name', 'Date Delivered']],
-      body: tableData,
-      styles: { fontSize: 9, cellPadding: 2 },
-      headStyles: { fillColor: [41, 128, 185], halign: 'center' },
-      bodyStyles: { halign: 'center' },
-      theme: 'grid',
-    });
-
-    doc.save(`${filename}.pdf`);
   };
 
   const openCheckupModal = async (preg) => {
@@ -269,24 +169,17 @@ const Reports = () => {
             HT: data.height || '—',
             WT: data.weight || '—',
             MUAC: data.muac || '—',
-            GP: data.examination || '—',
+            GP: data.Gp || '—',
             TEMPERATURE: data.temperature || '—',
             FH: data.fh || '—',
             PRESENTATION: data.presentation || '—',
             FHT: data.fht || '—',
             'TT GIVEN': data.ttGiven || '—',
-            EOG: data.eog || '—',
+            AOG: data.aog || '—',
             FESO4FA: data.feso4fa || '—',
             'CALCIUM CARB': data.calciumCarb || '—',
-            'RISK FACTOR': data.riskAssessment || '—',
-            LABORATORIES: data.laboratories || '—',
-            DONE: data.done || '—',
-            RPR: data.rpr || '—',
-            HBSAG: data.hbsag || '—',
-            CBC: data.cbc || '—',
-            'BLOOD SUGAR': data.bloodSugar || '—',
-            'HIV SCREENING': data.hivScreening || '—',
-            URINALYSIS: data.urinalysis || '—',
+            'HEALTH STATUS': data.riskAssessment || '—',
+            'RISK FACTOR': data.riskFactor || '—',
           };
         })
         .sort((a, b) => {
@@ -308,133 +201,94 @@ const Reports = () => {
     setCheckupRecords([]);
   };
 
-  // ✅ Generate Checkup Record PDF (landscape like image)
   const handleGeneratePatientPdf = () => {
-    if (!selectedPatient || checkupRecords.length === 0) return;
+  if (!selectedPatient || checkupRecords.length === 0) return;
 
-    const doc = new jsPDF();
-    doc.setFontSize(14);
-    doc.text('Prenatal Checkup Record', doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
+  const doc = new jsPDF("landscape", "mm", "a4");
+  const pageWidth = doc.internal.pageSize.width;
 
-    doc.setFontSize(10);
-    let y = 25;
-    const info = [
-      ['NAME:', selectedPatient.patientName || ''],
-      ['ADDRESS:', selectedPatient.address || ''],
-      ['BIRTHDAY:', selectedPatient.birthdate || ''],
-      ['AGE:', selectedPatient.age || ''],
-      ['CP NO:', selectedPatient.phoneNumber || ''],
-      ['LMP:', selectedPatient.lmp || ''],
-      ['EDC:', selectedPatient.edc || ''],
-      ['BMI:', selectedPatient.bmi || ''],
-    ];
-    info.forEach(([label, value]) => {
-      doc.text(`${label}`, 14, y);
-      doc.text(`${value}`, 45, y);
-      y += 6;
-    });
+  // Header text
+  doc.setFont("Times", "Normal");
+  doc.setFontSize(12);
+  doc.text("Province of Occidental Mindoro", pageWidth / 2, 12, { align: "center" });
+  doc.text("Municipality of San Jose", pageWidth / 2, 18, { align: "center" });
+  doc.text("PRENATAL CHECKUP RECORD", pageWidth / 2, 24, { align: "center" });
 
-    const headers = ['Date', ...checkupRecords.map((r) => r.date)];
-    const fields = Object.keys(checkupRecords[0] || {}).filter((f) => f !== 'date');
-    const body = fields.map((f) => [f, ...checkupRecords.map((r) => r[f] || '—')]);
+  let y = 32;
 
-    autoTable(doc, {
-      startY: y + 4,
-      head: [headers],
-      body,
-      styles: { fontSize: 8, cellPadding: 2 },
-      headStyles: { fillColor: [41, 128, 185], halign: 'center' },
-      bodyStyles: { halign: 'center' },
-      theme: 'grid',
-    });
+  // Patient info
+  doc.setFontSize(10);
+  const info = [
+    ['NAME:', selectedPatient.patientName || ''],
+    ['ADDRESS:', selectedPatient.address || ''],
+    ['BIRTHDAY:', selectedPatient.birthdate || ''],
+    ['AGE:', selectedPatient.age || ''],
+    ['CP NO:', selectedPatient.phoneNumber || ''],
+    ['LMP:', selectedPatient.lmp || ''],
+    ['EDC:', selectedPatient.edc || ''],
+   
+  ];
 
-    doc.save(`${(selectedPatient.patientName || 'patient').replace(/\s+/g, '_')}_checkup_record.pdf`);
-  };
+  info.forEach(([label, value]) => {
+    doc.text(label, 14, y);
+    doc.text(value, 50, y);
+    y += 6;
+  });
+
+  // Table data
+  const headers = ['Date', ...checkupRecords.map((r) => r.date)];
+  const fields = Object.keys(checkupRecords[0] || {}).filter((f) => f !== 'date');
+  const body = fields.map((f) => [f, ...checkupRecords.map((r) => r[f] || '—')]);
+
+  autoTable(doc, {
+    startY: y + 4,
+    head: [headers],
+    body,
+    theme: "grid",
+   styles: { fontSize: 9, halign: "left", cellPadding: 2 },
+    headStyles: { fillColor: false, textColor: 0 },
+  });
+
+  const finalY = doc.lastAutoTable.finalY + 18;
+
+  // Footer signatures
+  const signatures = [
+    { name: "CHERRY ANN B. BALMES, RM", title: "Rural Health Midwife", x: 20, width: 70 },
+    { name: "JENILYN F. LOMOCSO, MD", title: "Municipal Health Officer", x: 110, width: 80 },
+    { name: "EMELYN M. GABAO", title: "BHW Coordinator", x: 205, width: 80 },
+  ];
+
+  signatures.forEach((sig) => {
+    doc.setFont("Times", "Bold");
+    doc.text(sig.name, sig.x + sig.width / 2 - doc.getTextWidth(sig.name) / 2, finalY);
+    doc.line(sig.x, finalY + 2, sig.x + sig.width, finalY + 2);
+    doc.setFont("Times", "Normal");
+    doc.text(sig.title, sig.x + sig.width / 2 - doc.getTextWidth(sig.title) / 2, finalY + 7);
+  });
+
+  doc.save(`${(selectedPatient.patientName || 'patient').replace(/\s+/g, '_')}_checkup_record.pdf`);
+};
 
   return (
     <div className={styles.container}>
       <div className={styles.cardFull}>
-        <div className={styles.header}>
-          <h1>Generate Reports</h1>
-          <div className={styles.controlsWrapper}>
-            <div className={styles.controls}>
-              <select value={filter} onChange={(e) => setFilter(e.target.value)}>
-                <option>This Month</option>
-                <option>Last Month</option>
-                <option>Custom Range</option>
-              </select>
-            </div>
-
-            {filter === 'Custom Range' && (
-              <div className={styles.dateRange}>
-                <DatePicker
-                  selected={customStartDate}
-                  onChange={setCustomStartDate}
-                  placeholderText="Start Date"
-                />
-                <DatePicker
-                  selected={customEndDate}
-                  onChange={setCustomEndDate}
-                  placeholderText="End Date"
-                />
-              </div>
-            )}
-          </div>
+        <h1>Pregnant Checkup Records</h1>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px" }}>
+          <label htmlFor="monthSelect">Select Month:</label>
+          <select
+            id="monthSelect"
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(e.target.value)}
+          >
+            <option value="">All</option>
+            {monthOrder.map((m) => (
+              <option key={m} value={m}>
+                {monthNames[m]}
+              </option>
+            ))}
+          </select>
         </div>
 
-        {/* --- 4️⃣ Delivered Pregnant Women --- */}
-        <h3>
-          Delivered Pregnant Women ({deliveredUsers.length})
-          <button
-            onClick={() => generateSummaryPdf(deliveredUsers, 'delivered_pregnant', 'Delivered Pregnant Women Report')}
-            style={{
-              backgroundColor: '#27ae60',
-              color: '#fff',
-              border: 'none',
-              padding: '6px 10px',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              marginBottom: '5px',
-              marginLeft: '12px',
-            }}
-          >
-            🡇 Generate Report
-          </button>
-        </h3>
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th>No.</th>
-              <th>Pregnant Name</th>
-              <th>Address</th>
-              <th>Birthdate</th>
-              <th>Age</th>
-              <th>Phone Number</th>
-              <th>LMP Date</th>
-              <th>EDC</th>
-              <th>Center Name</th>
-              <th>Date Delivered</th>
-            </tr>
-          </thead>
-          <tbody>
-            {deliveredUsers.map((u, i) => (
-              <tr key={u.id}>
-                <td>{i + 1}</td>
-                <td>{u.name}</td>
-                <td>{u.address}</td>
-                <td>{u.birthDate}</td>
-                <td>{u.age}</td>
-                <td>{u.phone}</td>
-                <td>{u.lmp}</td>
-                <td>{u.edc}</td>
-                <td>{u.centerName}</td>
-                <td>{u.deliveredAt}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        <h2 style={{ marginTop: '50px' }}>Pregnant Checkup Records</h2>
         <table className={styles.table}>
           <thead>
             <tr>
@@ -533,7 +387,6 @@ const Reports = () => {
                 </div>
               </div>
 
-              {/* ✅ Generate PDF button */}
               <button
                 onClick={handleGeneratePatientPdf}
                 style={{

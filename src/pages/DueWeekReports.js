@@ -1,0 +1,285 @@
+// DueWeekReports.js
+import React, { useEffect, useState } from "react";
+import {
+  collection,
+  getDocs,
+  query,
+  where,
+  orderBy,
+  limit,
+} from "firebase/firestore";
+import { db } from "../firebase";
+import styles from "./Reports.module.css";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+
+const monthOrder = ["01","02","03","04","05","06","07","08","09","10","11","12"];
+
+const monthNames = {
+  "01": "January",
+  "02": "February",
+  "03": "March",
+  "04": "April",
+  "05": "May",
+  "06": "June",
+  "07": "July",
+  "08": "August",
+  "09": "September",
+  "10": "October",
+  "11": "November",
+  "12": "December",
+};
+
+const DueWeekReports = () => {
+  const [users, setUsers] = useState([]);
+  const [selectedMonth, setSelectedMonth] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+
+  const formatDate = (date) => {
+    if (!date) return "N/A";
+    const d =
+      date instanceof Date
+        ? date
+        : date?.toDate
+        ? date.toDate()
+        : new Date(date);
+    if (isNaN(d.getTime())) return "N/A";
+    return d.toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
+
+  useEffect(() => {
+    const fetchDueWeekUsers = async () => {
+      try {
+        const list = [];
+        const dueWeekQuery = query(
+          collection(db, "pregnant_trimester"),
+          where("weeks", ">=", 36)
+        );
+        const dueWeekSnap = await getDocs(dueWeekQuery);
+
+        for (let docSnap of dueWeekSnap.docs) {
+          const trimester = docSnap.data();
+          const userId = trimester.patientId;
+
+          // Fetch user info
+          const userDoc = await getDocs(
+            query(collection(db, "pregnant_users"), where("__name__", "==", userId))
+          );
+          const user = userDoc.docs[0]?.data();
+          if (!user) continue;
+
+          // Fetch latest checkup to get healthStatus
+          const checkupSnap = await getDocs(
+            query(
+              collection(db, "checkup_record", userId, "records"),
+              orderBy("date", "desc"),
+              limit(1)
+            )
+          );
+          const checkup = checkupSnap.docs[0]?.data();
+          const healthStatus = checkup?.riskAssessment || "Normal";
+
+          const latestUpdate = trimester.updatedAt
+            ? typeof trimester.updatedAt.toDate === "function"
+              ? trimester.updatedAt.toDate()
+              : new Date(trimester.updatedAt)
+            : null;
+
+          list.push({
+            id: userId,
+            name: user.name || "—",
+            address: user.address || "—",
+            phone: user.phone || "—",
+            lmp: trimester.lmp ? formatDate(trimester.lmp) : "N/A",
+            edc: trimester.edc ? formatDate(trimester.edc) : "N/A",
+            weeks: trimester.weeks || 0,
+            latestUpdate,
+            healthStatus,
+          });
+        }
+
+        setUsers(list);
+      } catch (err) {
+        console.error("Error fetching due week users:", err);
+      }
+    };
+
+    fetchDueWeekUsers();
+  }, []);
+
+  // Apply month + status filters
+  const filteredUsers = users.filter((u) => {
+    if (selectedMonth) {
+      if (!u.latestUpdate) return false;
+      const month = String(u.latestUpdate.getMonth() + 1).padStart(2, "0");
+      if (month !== selectedMonth) return false;
+    }
+    if (statusFilter === "ALL") return true;
+    return u.healthStatus?.toLowerCase() === statusFilter.toLowerCase();
+  });
+
+  const getStatusColor = (status) => {
+    if (!status) return "#000";
+    const s = status.toLowerCase();
+    if (s === "normal") return "#27ae60"; // green
+    if (s === "risk") return "#f1c40f"; // yellow
+    if (s === "high risk") return "#e74c3c"; // red
+    return "#000";
+  };
+
+  const generatePdf = () => {
+    if (filteredUsers.length === 0) return;
+
+    const doc = new jsPDF("landscape", "mm", "a4");
+    const pageWidth = doc.internal.pageSize.width;
+    const topMargin = 25.4; // 1 inch in mm
+
+    doc.setFont("Times", "Bold");
+    doc.setFontSize(12);
+    doc.text("Province of Occidental Mindoro", pageWidth / 2, 12, { align: "center" });
+    doc.text("Municipality of San Jose", pageWidth / 2, 18, { align: "center" });
+    doc.text("DUE WEEK PREGNANT REPORT", pageWidth / 2, 24, { align: "center" });
+
+    const monthLabel = selectedMonth ? monthNames[selectedMonth] : "ALL MONTHS";
+    const yearLabel = new Date().getFullYear();
+    doc.text(`${monthLabel} ${yearLabel}`, pageWidth / 2, 30, { align: "center" });
+
+    const tableData = filteredUsers.map((u, i) => [
+      i + 1,
+      u.name,
+      u.address,
+      u.phone,
+      u.lmp,
+      u.edc,
+      u.weeks,
+      u.healthStatus,
+    ]);
+
+    autoTable(doc, {
+        startY: topMargin + 25,
+      startY: 35,
+      head: [["No.", "Name", "Address", "Phone", "LMP", "EDC", "Weeks", "Health Status"]],
+      body: tableData,
+      theme: "grid",
+      styles: { fontSize: 9, halign: "left", lineWidth: 0.3, cellPadding: 1.5 },
+      headStyles: { fillColor: false, textColor: 0, lineWidth: 0.3, halign: "center" },
+      columnStyles: { 0: { halign: "center", cellWidth: 12 } },
+      didParseCell: (data) => {
+        if (data.section === "body" && data.column.index === 7) {
+          const val = (data.cell.raw || "").toLowerCase();
+          if (val === "normal") data.cell.styles.textColor = [39, 174, 96];
+          else if (val === "risk") data.cell.styles.textColor = [241, 196, 15];
+          else if (val === "high risk") data.cell.styles.textColor = [231, 76, 60];
+          else data.cell.styles.textColor = [0, 0, 0];
+          data.cell.styles.fontStyle = "bold";
+        }
+      },
+    });
+
+    const finalY = doc.lastAutoTable.finalY + 18;
+
+    // Footer signatures same as HealthStatus.js
+    const signatures = [
+      { name: "CHERRY ANN B. BALMES, RM", title: "Rural Health Midwife", x: 20, width: 70 },
+      { name: "JENILYN F. LOMOCSO, MD", title: "Municipal Health Officer", x: 110, width: 80 },
+      { name: "EMELYN M. GABAO", title: "BHW Coordinator", x: 205, width: 80 },
+    ];
+
+    signatures.forEach((sig) => {
+      doc.setFont("Times", "Bold");
+      doc.text(sig.name, sig.x + sig.width / 2 - doc.getTextWidth(sig.name) / 2, finalY);
+      doc.line(sig.x, finalY + 2, sig.x + sig.width, finalY + 2);
+      doc.setFont("Times", "Normal");
+      doc.text(sig.title, sig.x + sig.width / 2 - doc.getTextWidth(sig.title) / 2, finalY + 7);
+    });
+
+    doc.save("due_week_report.pdf");
+  };
+
+  return (
+    <div className={styles.container}>
+      <div className={styles.cardFull}>
+        <h1>Due Week Pregnant Women</h1>
+
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", gap: "12px" }}>
+          {/* Month filter */}
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <label htmlFor="monthSelect">Select Month:</label>
+            <select
+              id="monthSelect"
+              className={styles.filterSelect}
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+            >
+              <option value="">All</option>
+              {monthOrder.map((m) => (
+                <option key={m} value={m}>{monthNames[m]}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Health Status filter + Generate PDF */}
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <label htmlFor="statusSelect">Health Status:</label>
+            <select
+              id="statusSelect"
+              className={styles.filterSelect}
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="ALL">All</option>
+              <option value="Normal">Normal</option>
+              <option value="Risk">Risk</option>
+              <option value="High Risk">High Risk</option>
+            </select>
+            <button
+              onClick={generatePdf}
+              style={{ background: "#27ae60", color: "#fff", padding: "6px 10px", borderRadius: "4px", border: "none", cursor: "pointer" }}
+            >
+              🡇 Generate Report
+            </button>
+          </div>
+        </div>
+
+        <table className={styles.table}>
+          <thead>
+            <tr>
+              <th>No.</th>
+              <th>Name</th>
+              <th>Address</th>
+              <th>Phone</th>
+              <th>LMP</th>
+              <th>EDC</th>
+              <th>Weeks</th>
+              <th>Health Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredUsers.map((u, i) => (
+              <tr key={u.id}>
+                <td>{i + 1}</td>
+                <td>{u.name}</td>
+                <td>{u.address}</td>
+                <td>{u.phone}</td>
+                <td>{u.lmp}</td>
+                <td>{u.edc}</td>
+                <td>{u.weeks}</td>
+                <td style={{ fontWeight: "bold", color: getStatusColor(u.healthStatus) }}>{u.healthStatus}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        {filteredUsers.length === 0 && (
+          <p style={{ textAlign: "center", marginTop: "20px" }}>No records found for the selected filter.</p>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default DueWeekReports;
