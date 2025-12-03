@@ -98,150 +98,158 @@ function Signup() {
 
         {/* FORM */}
         <div className="form-container">
-          <>
-            {/* NAME */}
-            <div className="input-group">
-              <label>Name</label>
-              <div className="input-with-icon">
-                <span className="material-icons">person</span>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Name"
-                  style={errors.name ? { borderColor: "red" } : {}}
-                />
-              </div>
-              {errors.name && <span className="error-text">{errors.name}</span>}
-            </div>
 
-            {/* NUMBER */}
-            <div className="input-group">
-              <label>Number</label>
-              <div className="input-with-icon">
-                <span className="material-icons">call</span>
-                <input
-                  type="text"
-                  value={number}
-                  onChange={(e) => setNumber(e.target.value)}
-                  placeholder="63+"
-                  style={errors.number ? { borderColor: "red" } : {}}
-                />
-              </div>
-              {errors.number && <span className="error-text">{errors.number}</span>}
-            </div>
-
-            {/* BIRTHDAY */}
-            <div className="input-group">
-              <label>Birthday</label>
-              <div className="input-with-icon">
-                <span className="material-icons">cake</span>
-                <input
-                  type="date"
-                  value={birthday}
-                  onChange={(e) => setBirthday(e.target.value)}
-                  style={errors.birthday ? { borderColor: "red" } : {}}
-                />
-              </div>
-              {errors.birthday && (
-                <span className="error-text">{errors.birthday}</span>
-              )}
-            </div>
-
-            {/* ADDRESS */}
-            <div className="input-group">
-              <label>Address</label>
-              <div className="input-with-icon">
-                <span className="material-icons">home</span>
-                <input
-                  type="text"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  placeholder="House No. / Street / Barangay"
-                  style={errors.address ? { borderColor: "red" } : {}}
-                />
-              </div>
-              {errors.address && (
-                <span className="error-text">{errors.address}</span>
-              )}
-            </div>
-
-            {/* EMAIL */}
-            <div className="input-group">
-              <label>Email</label>
-              <div className="input-with-icon">
-                <span className="material-icons">mail</span>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="example@gmail.com"
-                  style={errors.email ? { borderColor: "red" } : {}}
-                />
-              </div>
-              {errors.email && <span className="error-text">{errors.email}</span>}
-            </div>
-
-            {/* PASSWORD */}
-            <div className="input-group">
-              <label>Password</label>
-              <div className="input-with-icon">
-                <span className="material-icons">lock</span>
-                <input
-                  type={showPass ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="********"
-                  style={errors.password ? { borderColor: "red" } : {}}
-                />
-                <span
-                  className="material-icons eye-icon"
-                  onClick={() => setShowPass(!showPass)}
-                >
-                  {showPass ? "visibility" : "visibility_off"}
-                </span>
-              </div>
-              {errors.password && (
-                <span className="error-text">{errors.password}</span>
-              )}
-            </div>
-
-            {/* CONFIRM PASSWORD */}
-            <div className="input-group">
-              <label>Confirm Password</label>
-              <div className="input-with-icon">
-                <span className="material-icons">lock</span>
-                <input
-                  type={showConfirmPass ? "text" : "password"}
-                  value={confirmPass}
-                  onChange={(e) => setConfirmPass(e.target.value)}
-                  placeholder="********"
-                  style={errors.confirmPass ? { borderColor: "red" } : {}}
-                />
-                <span
-                  className="material-icons eye-icon"
-                  onClick={() => setShowConfirmPass(!showConfirmPass)}
-                >
-                  {showConfirmPass ? "visibility" : "visibility_off"}
-                </span>
-              </div>
-              {errors.confirmPass && (
-                <span className="error-text">{errors.confirmPass}</span>
-              )}
-            </div>
-
-            <button className="auth-button" onClick={handleSignup}>
-              SIGN UP
-            </button>
-
-            <p className="footer-text">
-              Already have an account?{" "}
-              <span onClick={() => navigate("/login")} className="link">
-                LOGIN
-              </span>
-            </p>
-          </>
+  <div className="form-row">
+    {/* LEFT COLUMN */}
+    <div className="form-col">
+      
+      {/* NAME */}
+      <div className="input-group">
+        <label>Name</label>
+        <div className="input-with-icon">
+          <span className="material-icons">person</span>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Name"
+            style={errors.name ? { borderColor: "red" } : {}}
+          />
         </div>
+        {errors.name && <span className="error-text">{errors.name}</span>}
+      </div>
+
+      {/* NUMBER */}
+      <div className="input-group">
+        <label>Number</label>
+        <div className="input-with-icon">
+          <span className="material-icons">call</span>
+          <input
+            type="text"
+            value={number}
+            onChange={(e) => setNumber(e.target.value)}
+            placeholder="63+"
+            style={errors.number ? { borderColor: "red" } : {}}
+          />
+        </div>
+        {errors.number && <span className="error-text">{errors.number}</span>}
+      </div>
+
+      {/* BIRTHDAY */}
+      <div className="input-group">
+        <label>Birthday</label>
+        <div className="input-with-icon">
+          <span className="material-icons">cake</span>
+          <input
+            type="date"
+            value={birthday}
+            onChange={(e) => setBirthday(e.target.value)}
+            style={errors.birthday ? { borderColor: "red" } : {}}
+          />
+        </div>
+        {errors.birthday && <span className="error-text">{errors.birthday}</span>}
+      </div>
+
+      {/* ADDRESS */}
+      <div className="input-group">
+        <label>Address</label>
+        <div className="input-with-icon">
+          <span className="material-icons">home</span>
+          <input
+            type="text"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            placeholder="House No. / Street / Barangay"
+            style={errors.address ? { borderColor: "red" } : {}}
+          />
+        </div>
+        {errors.address && <span className="error-text">{errors.address}</span>}
+      </div>
+    
+    </div>
+
+    {/* RIGHT COLUMN */}
+    <div className="form-col">
+
+      {/* EMAIL */}
+      <div className="input-group">
+        <label>Email</label>
+        <div className="input-with-icon">
+          <span className="material-icons">mail</span>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="example@gmail.com"
+            style={errors.email ? { borderColor: "red" } : {}}
+          />
+        </div>
+        {errors.email && <span className="error-text">{errors.email}</span>}
+      </div>
+
+      {/* PASSWORD */}
+      <div className="input-group">
+        <label>Password</label>
+        <div className="input-with-icon">
+          <span className="material-icons">lock</span>
+          <input
+            type={showPass ? "text" : "password"}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="********"
+            style={errors.password ? { borderColor: "red" } : {}}
+          />
+          <span
+            className="material-icons eye-icon"
+            onClick={() => setShowPass(!showPass)}
+          >
+            {showPass ? "visibility" : "visibility_off"}
+          </span>
+        </div>
+        {errors.password && <span className="error-text">{errors.password}</span>}
+      </div>
+
+      {/* CONFIRM PASSWORD */}
+      <div className="input-group">
+        <label>Confirm Password</label>
+        <div className="input-with-icon">
+          <span className="material-icons">lock</span>
+          <input
+            type={showConfirmPass ? "text" : "password"}
+            value={confirmPass}
+            onChange={(e) => setConfirmPass(e.target.value)}
+            placeholder="********"
+            style={errors.confirmPass ? { borderColor: "red" } : {}}
+          />
+          <span
+            className="material-icons eye-icon"
+            onClick={() => setShowConfirmPass(!showConfirmPass)}
+          >
+            {showConfirmPass ? "visibility" : "visibility_off"}
+          </span>
+        </div>
+        {errors.confirmPass && (
+          <span className="error-text">{errors.confirmPass}</span>
+        )}
+      </div>
+
+    </div>
+  </div>
+
+  {/* SUBMIT + LOGIN TEXT */}
+  <button className="auth-button" onClick={handleSignup}>
+    SIGN UP
+  </button>
+
+  <p className="footer-text">
+    Already have an account?{" "}
+    <span onClick={() => navigate("/login")} className="link">
+      LOGIN
+    </span>
+  </p>
+
+</div>
+
       </div>
 
       {/* SUCCESS MODAL */}
