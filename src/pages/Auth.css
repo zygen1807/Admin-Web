@@ -4,93 +4,60 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  background: #d9e3f7;
+  background: #c9e0e4;
   font-family: "Arial", sans-serif;
 }
 
-/* Main container (holds image + form) */
-.login-container {
+/* Main container for Signup */
+.signup-container {
   display: flex;
-  max-width: 1100px;
+  flex-direction: column;
+  max-width: 450px;
   width: 95%;
   background: white;
   border-radius: 18px;
   overflow: hidden;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-}
-
-/* Left Section */
-.left-section {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  align-items: center;
-  background: #ffffff;
-  padding: 0;
-  margin: 0;
-}
-
-/* Doctor image takes full width */
-.doctor-image {
-  width: 100%;
-  height: auto;
-  display: block;
-  border-radius: 0;
-  margin: 0;
-  padding: 0;
-}
-
-/* Blue welcome box (tight, no padding gap) */
-.welcome-box {
-  background: #007e96;
-  color: rgb(255, 255, 255);
-  width: 100%;
-  text-align: left;
-  padding: 30px 40px;
+  padding: 40px 30px;
   box-sizing: border-box;
-  border-radius: 0;
 }
 
-.welcome-box h2 {
-  font-size: 24px;
-  margin-bottom: 10px;
+/* Welcome Message at the top */
+.signup-welcome {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.signup-welcome h2 {
+  font-size: 26px;
   font-weight: 700;
-  color: rgb(255, 255, 255);
+  color: #007e96;
+  margin-bottom: 10px;
 }
 
-.welcome-box p {
-  font-size: 18px;
+.signup-welcome p {
+  font-size: 16px;
+  color: #555;
   line-height: 1.5;
   opacity: 0.9;
 }
 
-/* Right Section */
-.right-section {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: white;
-  padding: 60px;
-}
-
+/* Form container */
 .form-container {
   width: 100%;
-  max-width: 360px;
 }
 
 .form-container h2 {
-  font-size: 28px;
+  font-size: 24px;
   color: #007e96;
   font-weight: bold;
-  margin-bottom: 30px;
+  margin-bottom: 25px;
   text-align: center;
 }
 
 /* Input Groups */
 .input-group {
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 }
 
 .input-group label {
@@ -129,6 +96,14 @@
   box-shadow: 0 0 8px rgba(42, 77, 208, 0.3);
 }
 
+/* Error Text */
+.error-text {
+  font-size: 12px;
+  color: red;
+  margin-top: 4px;
+  display: block;
+}
+
 /* Button */
 .auth-button {
   background: #007e96;
@@ -149,7 +124,7 @@
   transform: translateY(-2px);
 }
 
-/* Footer */
+/* Footer text */
 .footer-text {
   margin-top: 20px;
   font-size: 14px;
@@ -168,12 +143,194 @@
   color: #007e96;
 }
 
-/* Responsive */
-@media (max-width: 850px) {
-  .login-container {
-    flex-direction: column;
+/* Responsive for smaller screens */
+@media (max-width: 500px) {
+  .signup-container {
+    padding: 30px 20px;
   }
-  .left-section {
-    display: none;
+  .signup-welcome h2 {
+    font-size: 22px;
   }
+  .signup-welcome p {
+    font-size: 14px;
+  }
+}
+
+/* Logo */
+.signup-logo {
+  display: block;
+  margin: 0 auto 20px auto;
+  width: 80px;
+  height: auto;
+}
+
+/* Modal Overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+
+/* Modal Box */
+.modal-box {
+  background: white;
+  padding: 30px 25px;
+  border-radius: 12px;
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+}
+
+.modal-box h3 {
+  color: #007e96;
+  margin-bottom: 15px;
+}
+
+.modal-box input {
+  width: 100%;
+  padding: 12px 10px;
+  margin-bottom: 15px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 15px;
+}
+
+.modal-buttons {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.modal-buttons .auth-button.cancel {
+  background: #ccc;
+  color: #333;
+}
+
+.modal-buttons .auth-button.cancel:hover {
+  background: #aaa;
+}
+/* Forgot Password Modal */
+.forgot-modal-box {
+  background: white;
+  padding: 30px 25px;
+  border-radius: 12px;
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+}
+
+.forgot-modal-box h2 {
+  color: #007e96; /* match the screenshot */
+  margin-bottom: 10px;
+}
+
+.forgot-modal-box p {
+  font-size: 14px;
+  color: #555;
+  margin-bottom: 20px;
+}
+
+.forgot-modal-box input {
+  width: 100%;
+  padding: 12px 10px;
+  margin-bottom: 15px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 15px;
+}
+
+.forgot-modal-box .auth-button {
+  background: #007e96;
+  color: white;
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.forgot-modal-box .footer-text.link {
+  color: #007e96;
+  cursor: pointer;
+}
+
+/* General modal overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+/* Success Reset Modal */
+.success-reset-modal {
+  background: white;
+  padding: 32px 28px;
+  border-radius: 14px;
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+}
+
+.success-reset-modal h2 {
+  color: #007e96;
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+.success-reset-modal p {
+  color: #555;
+  font-size: 15px;
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+
+.success-reset-modal .small-text {
+  font-size: 13px;
+  opacity: 0.8;
+  margin-bottom: 20px;
+}
+
+.success-icon {
+  width: 85px;
+  margin-bottom: 10px;
+}
+/* Developer Access Key Error */
+.dev-error-text {
+  font-size: 12px;
+  color: red;
+  margin-top: 4px;
+  display: block;
+  text-align: left;
+  padding-left: 4px;
+}
+
+/* Highlight input with error */
+.input-with-error {
+  border-color: red !important;
+  box-shadow: 0 0 6px rgba(255, 0, 0, 0.4);
+}
+.super-admin-access {
+  font-size: 12px;
+  color: #6b6b6b;
+  text-align: center;
+  margin-top: 10px;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: 0.2s ease;
+}
+
+.super-admin-access:hover {
+  opacity: 1;
+  color: #2f80ed; /* soft blue highlight */
+  text-decoration: underline;
 }

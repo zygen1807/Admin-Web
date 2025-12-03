@@ -1,5 +1,6 @@
 // HealthStatus.js
 import React, { useEffect, useState } from "react";
+import { FaSearch } from "react-icons/fa";
 import {
   collection,
   getDocs,
@@ -34,6 +35,7 @@ const HealthStatus = () => {
   const [users, setUsers] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [searchTerm, setSearchTerm] = useState("");
 
   const formatDate = (date) => {
     if (!date) return "N/A";
@@ -122,6 +124,17 @@ const HealthStatus = () => {
     return u.healthStatus?.toLowerCase() === statusFilter.toLowerCase();
   });
 
+  // apply search filter after month + status filters
+  const displayedUsers = filteredUsers.filter((u) => {
+    const q = (searchTerm || "").trim().toLowerCase();
+    if (!q) return true;
+    return (
+      (u.name || "").toLowerCase().includes(q) ||
+      (u.address || "").toLowerCase().includes(q) ||
+      (u.phone || "").toLowerCase().includes(q)
+    );
+  });
+
   const getStatusColor = (status) => {
     if (!status) return "#000";
     const s = status.toLowerCase();
@@ -132,7 +145,7 @@ const HealthStatus = () => {
   };
 
   const generatePdf = () => {
-    if (filteredUsers.length === 0) return;
+    if (displayedUsers.length === 0) return;
 
     const doc = new jsPDF("landscape", "mm", "a4");
     const pageWidth = doc.internal.pageSize.width;
@@ -147,7 +160,7 @@ const HealthStatus = () => {
     const yearLabel = new Date().getFullYear();
     doc.text(`${monthLabel} ${yearLabel}`, pageWidth / 2, 30, { align: "center" });
 
-    const tableData = filteredUsers.map((u, i) => [
+    const tableData = displayedUsers.map((u, i) => [
       i + 1,
       u.name,
       u.address,
@@ -206,78 +219,105 @@ const HealthStatus = () => {
         <h1>Pregnant Health Status</h1>
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", gap: "12px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <label htmlFor="monthSelect">Select Month:</label>
-            <select
-  id="monthSelect"
-  className={styles.filterSelect}
-  value={selectedMonth}
-  onChange={(e) => setSelectedMonth(e.target.value)}
->
-  <option value="">All</option>
-  {monthOrder.map((m) => (
-    <option key={m} value={m}>
-      {monthNames[m]}
-    </option>
-  ))}
-</select>
+          {/* LEFT GROUP: Search + Month */}
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <div style={{ position: "relative" }}>
+              <input
+                type="text"
+                placeholder="Search name, address, phone..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{
+                  padding: "8px 32px 8px 12px",
+                  borderRadius: 8,
+                  border: "1px solid #d1d5db",
+                  width: 300,
+                }}
+              />
+              <FaSearch style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", color: "#64748b" }} />
+            </div>
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm("")}
+                style={{ padding: "6px 10px", borderRadius: 8, border: "none", background: "#efefef", cursor: "pointer" }}
+              >
+                Clear
+              </button>
+            )}
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+               <label htmlFor="monthSelect">Select Month:</label>
+               <select
+                 id="monthSelect"
+                 className={styles.filterSelect}
+                 value={selectedMonth}
+                 onChange={(e) => setSelectedMonth(e.target.value)}
+               >
+                 <option value="">All</option>
+                 {monthOrder.map((m) => (
+                   <option key={m} value={m}>
+                     {monthNames[m]}
+                   </option>
+                 ))}
+               </select>
+             </div>
 
           </div>
 
+          {/* RIGHT GROUP: Status + PDF */}
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-  <label htmlFor="statusSelect">Health Status:</label>
-  <select
-    id="statusSelect"
-    className={styles.filterSelect}
-    value={statusFilter}
-    onChange={(e) => setStatusFilter(e.target.value)}
-  >
-    <option value="ALL">All</option>
-    <option value="Normal">Normal</option>
-    <option value="Risk">Risk</option>
-    <option value="High Risk">High Risk</option>
-  </select>
-  <button onClick={generatePdf} style={{ background: "#27ae60", color: "#fff", padding: "6px 10px", borderRadius: "4px", border: "none", cursor: "pointer" }}>
-              🡇 Generate Report
-            </button>
-</div>
+             <label htmlFor="statusSelect">Health Status:</label>
+             <select
+               id="statusSelect"
+               className={styles.filterSelect}
+               value={statusFilter}
+               onChange={(e) => setStatusFilter(e.target.value)}
+             >
+               <option value="ALL">All</option>
+               <option value="Normal">Normal</option>
+               <option value="Risk">Risk</option>
+               <option value="High Risk">High Risk</option>
+             </select>
+             <button onClick={generatePdf} style={{ background: "#27ae60", color: "#fff", padding: "6px 10px", borderRadius: "4px", border: "none", cursor: "pointer" }}>
+               🡇 Generate Report
+             </button>
+           </div>
 
-        </div>
+         </div>
 
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th>No.</th>
-              <th>Name</th>
-              <th>Address</th>
-              <th>Birthdate</th>
-              <th>Age</th>
-              <th>Phone</th>
-              <th>LMP</th>
-              <th>EDC</th>
-              <th>Risk Factor</th>
-              <th>Health Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredUsers.map((u, i) => (
-              <tr key={u.id}>
-                <td>{i + 1}</td>
-                <td>{u.name}</td>
-                <td>{u.address}</td>
-                <td>{u.birthDate}</td>
-                <td>{u.age}</td>
-                <td>{u.phone}</td>
-                <td>{u.lmp}</td>
-                <td>{u.edc}</td>
-                <td>{u.riskFactor}</td>
-                <td style={{ fontWeight: "bold", color: getStatusColor(u.healthStatus) }}>{u.healthStatus}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+         <table className={styles.table}>
+           <thead>
+             <tr>
+               <th>No.</th>
+               <th>Name</th>
+               <th>Address</th>
+               <th>Birthdate</th>
+               <th>Age</th>
+               <th>Phone</th>
+               <th>LMP</th>
+               <th>EDC</th>
+               <th>Risk Factor</th>
+               <th>Health Status</th>
+             </tr>
+           </thead>
+           <tbody>
+             {displayedUsers.map((u, i) => (
+               <tr key={u.id}>
+                 <td>{i + 1}</td>
+                 <td>{u.name}</td>
+                 <td>{u.address}</td>
+                 <td>{u.birthDate}</td>
+                 <td>{u.age}</td>
+                 <td>{u.phone}</td>
+                 <td>{u.lmp}</td>
+                 <td>{u.edc}</td>
+                 <td>{u.riskFactor}</td>
+                 <td style={{ fontWeight: "bold", color: getStatusColor(u.healthStatus) }}>{u.healthStatus}</td>
+               </tr>
+             ))}
+           </tbody>
+         </table>
 
-        {filteredUsers.length === 0 && <p style={{ textAlign: "center", marginTop: "20px" }}>No records found for the selected filter.</p>}
+         {filteredUsers.length === 0 && <p style={{ textAlign: "center", marginTop: "20px" }}>No records found for the selected filter.</p>}
       </div>
     </div>
   );

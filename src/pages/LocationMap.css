@@ -1,44 +1,130 @@
 .location-container {
   display: flex;
-  flex-direction: row;
-  height: 80vh;
+  flex-direction: column;
+  height: 100vh;
   width: 100%;
   background-color: #fafafa;
   font-family: Arial, sans-serif;
 }
 
-.map-wrapper {
-  flex: 2;
-  height: 100%;
-  position: relative;
-}
-
-.map {
-  height: 100%;
-  width: 100%;
-  border-right: 1px solid #ccc;
-}
-
 .card-list {
-  flex: 1;
   padding: 10px;
   overflow-y: auto;
   background-color: #f9f9f9;
-  border-left: 1px solid #ccc;
+  border-top: 1px solid #ccc;
 }
 
+/* Table Styling */
+.card-list table {
+  
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 10px;
+}
+
+.card-list th,
+.card-list td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+  font-size: 0.9rem;
+}
+.recent-alerts-table thead th {
+  background: #3498db;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px); /* for Safari */
+  color: #333;
+  padding: 10px;
+  font-weight: bold;
+}
+
+.card-list th {
+  background-color: #1976d2; /* Blue header */
+  color: white;
+  font-weight: bold;
+  padding: 8px;
+}
+.card-list select {
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  background-color: #fff;
+  cursor: pointer;
+}
+
+
+.card-list td button {
+  margin: 2px 2px 2px 0;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+/* Table buttons */
+.card-list button {
+  cursor: pointer;
+  font-weight: bold;
+}
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.5);
+  display: flex;
+  justify-content: center; /* horizontally center */
+  align-items: center;     /* vertically center */
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 10px;
+  width: 90%;
+  max-width: 450px;
+  max-height: 90%;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+
+.modal-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 22px;
+  color: #fff; /* White X */
+  background-color: #e53935; /* Red background */
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  border: none;
+  cursor: pointer;
+  line-height: 28px;
+  text-align: center;
+}
+
+
+/* Card list items for emergencies */
 .card {
   background: white;
   margin-bottom: 12px;
   padding: 12px;
   border-radius: 10px;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 .card-header {
@@ -53,35 +139,6 @@
   font-size: 1rem;
 }
 
-.address, .phone {
-  margin: 3px 0;
-  font-size: 0.9rem;
-  color: #555;
-}
-
-.btn-row {
-  margin-top: 8px;
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.call-btn, .locate-btn {
-  flex: 1;
-  padding: 6px 10px;
-  border: none;
-  border-radius: 6px;
-  background-color: #1976d2;
-  color: white;
-  cursor: pointer;
-  font-size: 0.85rem;
-  transition: background-color 0.15s ease;
-}
-
-.call-btn:hover, .locate-btn:hover {
-  background-color: #1258a8;
-}
-
 .risk-badge {
   padding: 2px 8px;
   border-radius: 12px;
@@ -92,39 +149,86 @@
 }
 
 .risk-badge.normal {
-  background-color: green;
+  background-color: #42a5f5;
 }
 
 .risk-badge.risk {
-  background-color: orange;
+  background-color: #fb8c00;
 }
 
 .risk-badge.high-risk {
-  background-color: red;
+  background-color: #e53935;
 }
 
-/* Arrow Marker Styles */
+/* Arrow Marker Styles (optional) */
 .leaflet-marker-icon.red-arrow {
-  filter: hue-rotate(0deg) saturate(5) brightness(1.2); /* red arrow */
+  filter: hue-rotate(0deg) saturate(5) brightness(1.2);
 }
-
 .leaflet-marker-icon.blue-arrow {
-  filter: hue-rotate(200deg) saturate(5) brightness(1.2); /* blue arrow */
+  filter: hue-rotate(200deg) saturate(5) brightness(1.2);
 }
 
-/* Mobile-friendly layout */
+/* Responsive layout */
 @media (max-width: 768px) {
   .location-container {
     flex-direction: column;
     height: auto;
   }
-  .map-wrapper {
-    height: 50vh;
-  }
+
   .card-list {
-    flex: unset;
     height: auto;
     border-left: none;
     border-top: 1px solid #ccc;
   }
+
+  .card-list table {
+    font-size: 0.8rem;
+  }
+
+  .card-list th,
+  .card-list td {
+    padding: 6px;
+  }
+}
+
+/* Pagination buttons */
+.card-list div > button {
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 5px 10px;
+  cursor: pointer;
+  margin-right: 5px;
+}
+
+.card-list div > button:disabled {
+  background-color: #95a5a6;
+  cursor: not-allowed;
+}
+
+.card-list div span {
+  margin: 0 10px;
+  font-weight: bold;
+}
+.pagination-container {
+  display: flex;
+  justify-content: flex-end; /* aligns to the right */
+  align-items: center;
+  gap: 5px;
+  margin-top: 10px;
+}
+button {
+  background-color: #1976d2; /* Blue */
+  color: #fff;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background 0.2s ease;
+}
+
+button:hover {
+  background-color: #1565c0;
 }

@@ -20,6 +20,16 @@ import HealthStatus from "./pages/HealthStatus";
 import DueWeekReports from "./pages/DueWeekReports";
 import TotalPregnant from "./pages/TotalPregnant";
 import LaborStatusReports from "./pages/LaborStatusReports";
+import SuperAdminPage from "./pages/SuperAdminPage";
+import SuperAdminLogin from "./pages/SuperAdminLogin";
+
+import Homes from "./components/Homes";
+import About from "./components/About";
+import ContactUs from "./components/ContactUs";
+import FAQs from "./components/FAQs";
+import Developer from "./components/Developer";
+import Services from "./components/Services";
+
 
 
 function App() {
@@ -31,6 +41,8 @@ function App() {
         <Route path="/LandingPage" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+        <Route path="SuperAdminPage" element={< SuperAdminPage />} /> 
+        <Route path="SuperAdminLogin" element={< SuperAdminLogin />} />
 
         {/* Protected Routes with Layout */}
         <Route path="/app" element={<Layout />}>
@@ -50,6 +62,12 @@ function App() {
           <Route path="DueWeekReports" element={< DueWeekReports />} /> 
           <Route path="TotalPregnant" element={< TotalPregnant />} /> 
           <Route path="LaborStatusReports" element={< LaborStatusReports />} /> 
+          <Route path="Homes" element={< Homes />} /> 
+          <Route path="ContactUs" element={< ContactUs />} /> 
+          <Route path="FAQs" element={< FAQs />} /> 
+          <Route path="Developer" element={< Developer />} /> 
+          <Route path="Services" element={< Services />} /> 
+          <Route path="About" element={< About />} />  
         </Route>
       </Routes>
     </Router>

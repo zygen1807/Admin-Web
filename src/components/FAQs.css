@@ -1,0 +1,7 @@
+.faqs-section { padding:28px; text-align:center; }
+.faqs-section h1 { font-size:28px; margin-bottom:20px; color:#111827; }
+
+.faqs-list { display:flex; flex-direction:column; gap:14px; max-width:700px; margin:0 auto; }
+.faq-item { background:#fff; padding:16px; border-radius:12px; box-shadow:0 6px 18px rgba(0,0,0,0.06); text-align:left; }
+.faq-item h3 { margin:0; font-size:16px; color:var(--accent-2); }
+.faq-item p { margin:6px 0 0; font-size:14px; color:#6b7280; }

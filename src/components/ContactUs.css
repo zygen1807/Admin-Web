@@ -1,0 +1,9 @@
+.contact-section { padding:28px; text-align:center; }
+.contact-section h1 { font-size:28px; margin-bottom:12px; color:#111827; }
+.contact-section p { color:#6b7280; margin-bottom:24px; }
+
+.contact-cards { display:flex; justify-content:center; gap:18px; flex-wrap:wrap; }
+.contact-card { background:#fff; padding:16px; border-radius:12px; box-shadow:0 6px 18px rgba(0,0,0,0.06); width:200px; display:flex; flex-direction:column; align-items:center; gap:10px; }
+.contact-card img { width:48px; height:48px; }
+.contact-card h3 { margin:0; color:var(--accent-1); }
+.contact-card p { margin:0; font-size:13px; color:#6b7280; }

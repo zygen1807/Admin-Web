@@ -7,6 +7,8 @@ import {
   setDoc,
   deleteDoc,
   getDoc,
+  addDoc,
+  serverTimestamp,
 } from "firebase/firestore";
 import { db } from "../firebase";
 import styles from "./AssignPregnantBhw.module.css";
@@ -20,10 +22,11 @@ const AssignPregnantBhw = () => {
   const [assignedPregnants, setAssignedPregnants] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [showCheckupModal, setShowCheckupModal] = useState(false);
   const [selectedPregnant, setSelectedPregnant] = useState(null);
-  const [checkupDate, setCheckupDate] = useState("");
   const [loading, setLoading] = useState(true);
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
+const [pregToRemove, setPregToRemove] = useState(null);
+
 
   // Fetch all BHWs and Pregnant Users
   useEffect(() => {
@@ -41,6 +44,7 @@ const AssignPregnantBhw = () => {
             id: bhwId,
             no: index + 1,
             name: docSnap.data().name,
+            email: docSnap.data().email || "",
             assignedCount: patientsSnap.size,
           };
         })
@@ -94,54 +98,108 @@ const AssignPregnantBhw = () => {
     setShowConfirmModal(true);
   };
 
-  // Save assignment to Firestore
+  // Save assignment to Firestore, create admin notification, and calculate first checkup date from LMP
   const confirmAdd = async () => {
     if (!selectedBhw || !selectedPregnant) return;
 
-    // Save to bhw_patient_list
-    const patientRef = doc(
-      db,
-      `bhw_patient_list/${selectedBhw.id}/patients/${selectedPregnant.id}`
-    );
-    await setDoc(patientRef, { patientId: selectedPregnant.id });
+    try {
+      // 1) Save to bhw_patient_list
+      const patientRef = doc(
+        db,
+        `bhw_patient_list/${selectedBhw.id}/patients/${selectedPregnant.id}`
+      );
+      await setDoc(patientRef, { patientId: selectedPregnant.id });
 
-    // Then show checkup modal
-    setShowConfirmModal(false);
-    setShowCheckupModal(true);
-  };
+      // 2) Create admin notification for the assigned BHW
+      await addDoc(collection(db, "admin_notifications2"), {
+        selectedBhwname: selectedBhw.name || "",
+        bhwId: selectedBhw.id || "",
+        selectedBhwEmail: selectedBhw.email || "",
+        pregnantName: selectedPregnant.name || "",
+        patientId: selectedPregnant.id || "",
+        selectedPregnantEmail: selectedPregnant.email || "",
+        createdAt: serverTimestamp(),
+        message: `${selectedPregnant.name} has been assigned to your list`,
+        userType: "Midwife",
+      });
 
-  // Save first checkup info
-  const handleSaveCheckup = async () => {
-    if (!checkupDate) {
-      alert("Please enter a date for first check-up");
-      return;
+      // 3) Calculate a first-checkup date based on the pregnant user's LMP
+      // Use LMP + 30 days as the default first checkup; fall back to today + 3 days
+      let computedCheckupDate = "";
+      const lmpString = selectedPregnant?.lmp || "";
+      if (lmpString) {
+        const lmpDate = new Date(lmpString);
+        if (!isNaN(lmpDate.getTime())) {
+          lmpDate.setDate(lmpDate.getDate() + 30); // adjust days as required
+          computedCheckupDate = lmpDate.toISOString().split("T")[0]; // store as YYYY-MM-DD
+        }
+      }
+
+      if (!computedCheckupDate) {
+        const fallback = new Date();
+        fallback.setDate(fallback.getDate() + 3);
+        computedCheckupDate = fallback.toISOString().split("T")[0];
+      }
+
+      // 4) Save computed first-checkup date (use patient's id as doc id)
+      await setDoc(doc(db, "date_checkup_records", selectedPregnant.id), {
+        date: computedCheckupDate,
+        bhwId: selectedBhw.id,
+        patientId: selectedPregnant.id,
+      });
+
+      // 5) Update UI and state
+      setShowConfirmModal(false);
+      // Remove the pregnant from the selectable list immediately
+      setPregnantList((prev) => prev.filter((p) => p.id !== selectedPregnant.id));
+      setSelectedPregnant(null);
+      setShowAddModal(false);
+
+      alert("Pregnant assigned, notification sent!");
+    } catch (err) {
+      console.error("Error confirming assignment:", err);
+      alert("Failed to assign pregnant user. See console for details.");
     }
-
-    const checkupRef = doc(db, `date_checkup_records/${selectedPregnant.id}`);
-    await setDoc(checkupRef, {
-      date: checkupDate,
-      bhwId: selectedBhw.id,
-      patientId: selectedPregnant.id,
-    });
-
-    alert("Pregnant assigned and check-up recorded!");
-
-    // Remove from list immediately
-    setPregnantList((prev) =>
-      prev.filter((p) => p.id !== selectedPregnant.id)
-    );
-
-    setShowCheckupModal(false);
-    setSelectedPregnant(null);
-    setCheckupDate("");
   };
 
   // Remove assigned pregnant
-  const handleRemoveAssigned = async (pregId) => {
-    if (!selectedBhw) return;
-    await deleteDoc(doc(db, `bhw_patient_list/${selectedBhw.id}/patients/${pregId}`));
-    setAssignedPregnants((prev) => prev.filter((p) => p.id !== pregId));
-  };
+const handleRemoveAssigned = async () => {
+  if (!selectedBhw || !pregToRemove) return;
+
+  try {
+    // 1️⃣ Remove pregnant from BHW list
+    await deleteDoc(
+      doc(db, `bhw_patient_list/${selectedBhw.id}/patients/${pregToRemove.id}`)
+    );
+
+    // 2️⃣ Send notification
+    await addDoc(collection(db, "admin_notifications2"), {
+      selectedBhwname: selectedBhw.name || "",
+      bhwId: selectedBhw.id || "",
+      selectedBhwEmail: selectedBhw.email || "",
+      pregnantName: pregToRemove.name || "",
+      patientId: pregToRemove.id || "",
+      selectedPregnantEmail: pregToRemove.email || "",
+      createdAt: serverTimestamp(),
+      message: `${pregToRemove.name} has been removed from your list`,
+      userType: "Midwife",
+    });
+
+    // 3️⃣ Update UI
+    setAssignedPregnants((prev) =>
+      prev.filter((p) => p.id !== pregToRemove.id)
+    );
+
+    setPregToRemove(null);
+    setShowRemoveConfirm(false);
+
+    alert("Pregnant removed and notification sent.");
+  } catch (err) {
+    console.error("Error removing assigned pregnant:", err);
+    alert("Failed to remove pregnant user.");
+  }
+};
+
 
   if (loading) return <div className={styles.loading}>Loading...</div>;
 
@@ -247,11 +305,15 @@ const AssignPregnantBhw = () => {
                 <div key={preg.id} className={styles.assignedRow}>
                   <span>{preg.name}</span>
                   <button
-                    className={styles.removeButton}
-                    onClick={() => handleRemoveAssigned(preg.id)}
-                  >
-                    Remove
-                  </button>
+  className={styles.removeButton}
+  onClick={() => {
+    setPregToRemove(preg); // store full data, not just ID
+    setShowRemoveConfirm(true);
+  }}
+>
+  Remove
+</button>
+
                 </div>
               ))}
               {assignedPregnants.length === 0 && (
@@ -301,35 +363,34 @@ const AssignPregnantBhw = () => {
         </div>
       )}
 
-      {/* Check-up Modal */}
-      {showCheckupModal && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.modal}>
-            <h3 className={styles.modalTitle}>First Check-Up</h3>
-            <label className={styles.inputLabel}>Date</label>
-            <input
-              type="date"
-              className={styles.inputField}
-              value={checkupDate}
-              onChange={(e) => setCheckupDate(e.target.value)}
-            />
-            <div className={styles.modalActions}>
-              <button
-                className={styles.cancelButton}
-                onClick={() => setShowCheckupModal(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className={styles.saveButton}
-                onClick={handleSaveCheckup}
-              >
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {showRemoveConfirm && pregToRemove && (
+  <div className={styles.modalOverlay}>
+    <div className={styles.modal}>
+      <h3 className={styles.modalTitle}>Confirm Remove</h3>
+      <p>
+        Remove <strong>{pregToRemove.name}</strong> from{" "}
+        <strong>{selectedBhw.name}'s</strong> list?
+      </p>
+
+      <div className={styles.modalActions}>
+        <button
+          className={styles.cancelButton}
+          onClick={() => setShowRemoveConfirm(false)}
+        >
+          Cancel
+        </button>
+
+        <button
+          className={styles.removeButton}
+          onClick={handleRemoveAssigned}
+        >
+          Yes, Remove
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
     </div>
     </div>
   );

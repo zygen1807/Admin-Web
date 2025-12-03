@@ -125,11 +125,9 @@
 .notifIcon {
   width: 25px;
   height: 25px;
- 
   transition: transform 0.2s ease;
   border-radius: 50%;
   background-color: #c9e0e4 ;
-  
   margin-right: 70px;
 }
 
@@ -196,8 +194,8 @@
     opacity: 1;
     transform: translateY(0);
   }
-  
 }
+
 .container {
   display: flex;
   flex-direction: column;
@@ -246,18 +244,18 @@
   text-align: center;
 }
 
-/* 🔹 Notification Modal (Top-Right, No Shadow Background) */
+/* 🔹 Notification Modal (Top-Right) */
 .modalOverlay {
   position: fixed;
-  top: 60px; /* below topbar */
-  right: 20px; /* move near top-right corner */
+  top: 60px;       /* below topbar */
+  right: 20px;     /* top-right corner */
   width: auto;
   height: auto;
-  background: transparent; /* remove dark shadow background */
+  background: transparent;
   display: flex;
   justify-content: flex-end;
   align-items: flex-start;
-  z-index: 2000; /* stay above other elements */
+  z-index: 2000;
 }
 
 .modalBox {
@@ -269,15 +267,71 @@
   animation: fadeIn 0.2s ease-in-out;
 }
 
-/* Optional fade-in animation */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* 🔹 Logout Modal (Centered) */
+.logoutModalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(12, 18, 24, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
 }
 
+.logoutModal {
+  background: #fff;
+  padding: 20px;
+  width: 340px;
+  max-width: 90%;
+  border-radius: 12px;
+  box-shadow: 0 12px 30px rgba(2, 6, 23, 0.18);
+  text-align: center;
+  animation: fadeIn 0.25s ease-in-out;
+}
+
+.logoutModalTitle {
+  margin: 0 0 8px;
+  font-size: 18px;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.logoutModalText {
+  margin: 0 0 18px;
+  font-size: 14px;
+  color: #374151;
+}
+
+.logoutButtonStack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.logoutConfirmBtn {
+  background: #007e96;
+  color: #fff;
+  border: none;
+  padding: 10px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  width: 100%;
+}
+
+.logoutCancelBtn {
+  background: #f3f4f6;
+  color: #111827;
+  border: 1px solid #e6e9ee;
+  padding: 10px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+/* Responsive */
+@media (max-width: 420px) {
+  .logoutModal {
+    width: 92%;
+    padding: 16px;
+  }
+}

@@ -16,6 +16,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
+import { FaSearch } from "react-icons/fa";
 
 const monthOrder = ["01","02","03","04","05","06","07","08","09","10","11","12"];
 
@@ -41,6 +42,7 @@ const Reports = () => {
   const [customStartDate, setCustomStartDate] = useState(null);
   const [customEndDate, setCustomEndDate] = useState(null);
   const [selectedMonth, setSelectedMonth] = useState(""); // ✅ added state
+  const [searchTerm, setSearchTerm] = useState(""); // Added search state
   const [showModal, setShowModal] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [checkupRecords, setCheckupRecords] = useState([]);
@@ -163,8 +165,18 @@ const Reports = () => {
       const recData = recSnap.docs
         .map((d) => {
           const data = d.data();
+          // get proper Date object
+          let dt = null;
+          if (data.date) {
+            if (data.date.toDate) dt = data.date.toDate();
+            else dt = new Date(data.date);
+          }
+          const monthNum = dt ? String(dt.getMonth() + 1).padStart(2, '0') : null; // "01", ..., "12"
+
           return {
             date: data.date ? formatDate(data.date) : 'N/A',
+            dateISO: dt ? dt.toISOString() : null,
+            month: monthNum,
             BP: data.bloodPressure || '—',
             HT: data.height || '—',
             WT: data.weight || '—',
@@ -183,8 +195,8 @@ const Reports = () => {
           };
         })
         .sort((a, b) => {
-          const da = new Date(a.date);
-          const dbb = new Date(b.date);
+          const da = a.dateISO ? new Date(a.dateISO) : new Date(a.date);
+          const dbb = b.dateISO ? new Date(b.dateISO) : new Date(b.date);
           return da - dbb;
         });
 
@@ -269,70 +281,107 @@ const Reports = () => {
   doc.save(`${(selectedPatient.patientName || 'patient').replace(/\s+/g, '_')}_checkup_record.pdf`);
 };
 
+  // filtered view by search input and month select
+  const displayedPregnantData = pregnantData.filter((p) => {
+    const q = (searchTerm || "").trim().toLowerCase();
+    if (!q) return true;
+    return (
+      (p.patientName || "").toLowerCase().includes(q) ||
+      (p.address || "").toLowerCase().includes(q) ||
+      (p.phoneNumber || "").toLowerCase().includes(q)
+    );
+  });
+
+  // Filtered checkup columns by selectedMonth (if provided)
+  const filteredCheckupRecords = selectedMonth
+    ? checkupRecords.filter((rec) => rec.month === selectedMonth)
+    : checkupRecords;
+
   return (
     <div className={styles.container}>
       <div className={styles.cardFull}>
         <h1>Pregnant Checkup Records</h1>
         <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px" }}>
-          <label htmlFor="monthSelect">Select Month:</label>
-          <select
-            id="monthSelect"
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(e.target.value)}
-          >
-            <option value="">All</option>
-            {monthOrder.map((m) => (
-              <option key={m} value={m}>
-                {monthNames[m]}
-              </option>
-            ))}
-          </select>
-        </div>
+          {/* Search Box - moved left */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ position: "relative" }}>
+              <input
+                type="text"
+                placeholder="Search patients..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{
+                  padding: "8px 32px 8px 12px",
+                  borderRadius: 8,
+                  border: "1px solid #d1d5db",
+                  width: 260,
+                }}
+              />
+              <FaSearch style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", color: "#64748b" }} />
+            </div>
+        
+          </div>
 
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th>No.</th>
-              <th>Pregnant Name</th>
-              <th>Address</th>
-              <th>Birthdate</th>
-              <th>Age</th>
-              <th>Phone Number</th>
-              <th>LMP Date</th>
-              <th>EDC</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pregnantData.map((preg, index) => (
-              <tr key={preg.id}>
-                <td>{index + 1}</td>
-                <td>{preg.patientName}</td>
-                <td>{preg.address}</td>
-                <td>{preg.birthdate}</td>
-                <td>{preg.age}</td>
-                <td>{preg.phoneNumber}</td>
-                <td>{preg.lmp}</td>
-                <td>{preg.edc}</td>
-                <td>
-                  <button
-                    style={{
-                      backgroundColor: '#3498db',
-                      color: '#fff',
-                      border: 'none',
-                      padding: '4px 8px',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                    }}
-                    onClick={() => openCheckupModal(preg)}
-                  >
-                    View Checkup Records
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+           <label htmlFor="monthSelect">Select Month:</label>
+           <select
+             id="monthSelect"
+             value={selectedMonth}
+             onChange={(e) => setSelectedMonth(e.target.value)}
+           >
+             <option value="">All</option>
+             {monthOrder.map((m) => (
+               <option key={m} value={m}>
+                 {monthNames[m]}
+               </option>
+             ))}
+           </select>
+
+         </div>
+
+         <table className={styles.table}>
+           <thead>
+             <tr>
+               <th>No.</th>
+               <th>Pregnant Name</th>
+               <th>Address</th>
+               <th>Birthdate</th>
+               <th>Age</th>
+               <th>Phone Number</th>
+               <th>LMP Date</th>
+               <th>EDC</th>
+               <th>Action</th>
+             </tr>
+           </thead>
+           <tbody>
+           {displayedPregnantData.map((preg, index) => (
+               <tr key={preg.id}>
+                 <td>{index + 1}</td>
+                 <td>{preg.patientName}</td>
+                 <td>{preg.address}</td>
+                 <td>{preg.birthdate}</td>
+                 <td>{preg.age}</td>
+                 <td>{preg.phoneNumber}</td>
+                 <td>{preg.lmp}</td>
+                 <td>{preg.edc}</td>
+                 <td>
+                   <button
+                     style={{
+                       backgroundColor: '#3498db',
+                       color: '#fff',
+                       border: 'none',
+                       padding: '4px 8px',
+                       borderRadius: '4px',
+                       cursor: 'pointer',
+                     }}
+                     onClick={() => openCheckupModal(preg)}
+                   >
+                     View Checkup Records
+                   </button>
+                 </td>
+               </tr>
+             ))}
+           </tbody>
+         </table>
 
         {showModal && selectedPatient && (
           <div className={styles.modalOverlay}>
@@ -407,7 +456,7 @@ const Reports = () => {
                   <thead>
                     <tr>
                       <th>Date</th>
-                      {checkupRecords.map((rec, idx) => (
+                      {filteredCheckupRecords.map((rec, idx) => (
                         <th key={idx}>{rec.date}</th>
                       ))}
                     </tr>
@@ -418,7 +467,7 @@ const Reports = () => {
                       .map((field) => (
                         <tr key={field}>
                           <td>{field}</td>
-                          {checkupRecords.map((rec, idx) => (
+                          {filteredCheckupRecords.map((rec, idx) => (
                             <td key={idx}>{rec[field]}</td>
                           ))}
                         </tr>

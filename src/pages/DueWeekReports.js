@@ -12,6 +12,7 @@ import { db } from "../firebase";
 import styles from "./Reports.module.css";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { FaSearch } from "react-icons/fa";
 
 const monthOrder = ["01","02","03","04","05","06","07","08","09","10","11","12"];
 
@@ -34,6 +35,7 @@ const DueWeekReports = () => {
   const [users, setUsers] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [searchTerm, setSearchTerm] = useState("");
 
   const formatDate = (date) => {
     if (!date) return "N/A";
@@ -72,7 +74,7 @@ const DueWeekReports = () => {
           const user = userDoc.docs[0]?.data();
           if (!user) continue;
 
-          // Fetch latest checkup to get healthStatus
+          // Fetch latest checkup
           const checkupSnap = await getDocs(
             query(
               collection(db, "checkup_record", userId, "records"),
@@ -111,23 +113,34 @@ const DueWeekReports = () => {
     fetchDueWeekUsers();
   }, []);
 
-  // Apply month + status filters
-  const filteredUsers = users.filter((u) => {
-    if (selectedMonth) {
-      if (!u.latestUpdate) return false;
-      const month = String(u.latestUpdate.getMonth() + 1).padStart(2, "0");
-      if (month !== selectedMonth) return false;
-    }
-    if (statusFilter === "ALL") return true;
-    return u.healthStatus?.toLowerCase() === statusFilter.toLowerCase();
-  });
+  // ➤ APPLY FILTERS
+  const filteredUsers = users
+    .filter((u) => {
+      if (selectedMonth) {
+        if (!u.latestUpdate) return false;
+        const month = String(u.latestUpdate.getMonth() + 1).padStart(2, "0");
+        if (month !== selectedMonth) return false;
+      }
+      if (statusFilter !== "ALL") {
+        return u.healthStatus?.toLowerCase() === statusFilter.toLowerCase();
+      }
+      return true;
+    })
+    .filter((u) => {
+      const q = searchTerm.toLowerCase();
+      return (
+        u.name.toLowerCase().includes(q) ||
+        u.address.toLowerCase().includes(q) ||
+        u.phone.toLowerCase().includes(q)
+      );
+    });
 
   const getStatusColor = (status) => {
     if (!status) return "#000";
     const s = status.toLowerCase();
-    if (s === "normal") return "#27ae60"; // green
-    if (s === "risk") return "#f1c40f"; // yellow
-    if (s === "high risk") return "#e74c3c"; // red
+    if (s === "normal") return "#27ae60";
+    if (s === "risk") return "#f1c40f";
+    if (s === "high risk") return "#e74c3c";
     return "#000";
   };
 
@@ -136,7 +149,6 @@ const DueWeekReports = () => {
 
     const doc = new jsPDF("landscape", "mm", "a4");
     const pageWidth = doc.internal.pageSize.width;
-    const topMargin = 25.4; // 1 inch in mm
 
     doc.setFont("Times", "Bold");
     doc.setFontSize(12);
@@ -160,7 +172,6 @@ const DueWeekReports = () => {
     ]);
 
     autoTable(doc, {
-        startY: topMargin + 25,
       startY: 35,
       head: [["No.", "Name", "Address", "Phone", "LMP", "EDC", "Weeks", "Health Status"]],
       body: tableData,
@@ -174,7 +185,6 @@ const DueWeekReports = () => {
           if (val === "normal") data.cell.styles.textColor = [39, 174, 96];
           else if (val === "risk") data.cell.styles.textColor = [241, 196, 15];
           else if (val === "high risk") data.cell.styles.textColor = [231, 76, 60];
-          else data.cell.styles.textColor = [0, 0, 0];
           data.cell.styles.fontStyle = "bold";
         }
       },
@@ -182,7 +192,6 @@ const DueWeekReports = () => {
 
     const finalY = doc.lastAutoTable.finalY + 18;
 
-    // Footer signatures same as HealthStatus.js
     const signatures = [
       { name: "CHERRY ANN B. BALMES, RM", title: "Rural Health Midwife", x: 20, width: 70 },
       { name: "JENILYN F. LOMOCSO, MD", title: "Municipal Health Officer", x: 110, width: 80 },
@@ -191,10 +200,13 @@ const DueWeekReports = () => {
 
     signatures.forEach((sig) => {
       doc.setFont("Times", "Bold");
-      doc.text(sig.name, sig.x + sig.width / 2 - doc.getTextWidth(sig.name) / 2, finalY);
+      const nameX = sig.x + sig.width / 2 - doc.getTextWidth(sig.name) / 2;
+      doc.text(sig.name, nameX, finalY);
       doc.line(sig.x, finalY + 2, sig.x + sig.width, finalY + 2);
+
       doc.setFont("Times", "Normal");
-      doc.text(sig.title, sig.x + sig.width / 2 - doc.getTextWidth(sig.title) / 2, finalY + 7);
+      const titleX = sig.x + sig.width / 2 - doc.getTextWidth(sig.title) / 2;
+      doc.text(sig.title, titleX, finalY + 7);
     });
 
     doc.save("due_week_report.pdf");
@@ -205,46 +217,90 @@ const DueWeekReports = () => {
       <div className={styles.cardFull}>
         <h1>Due Week Pregnant Women</h1>
 
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", gap: "12px" }}>
-          {/* Month filter */}
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <label htmlFor="monthSelect">Select Month:</label>
-            <select
-              id="monthSelect"
-              className={styles.filterSelect}
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-            >
-              <option value="">All</option>
-              {monthOrder.map((m) => (
-                <option key={m} value={m}>{monthNames[m]}</option>
-              ))}
-            </select>
-          </div>
+        {/* FILTERS: left (Search + Month) and right (Health Status + Generate) */}
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: 16 }}>
+            {/* LEFT: Search + Month */}
+            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+              <div style={{ position: "relative" }}>
+                <input
+                  type="text"
+                  placeholder="Search..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  style={{
+                    padding: "8px 32px 8px 12px",
+                    borderRadius: 8,
+                    border: "1px solid #d1d5db",
+                    width: 260,
+                  }}
+                />
+                <FaSearch
+                  style={{
+                    position: "absolute",
+                    right: 8,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    color: "#64748b",
+                  }}
+                />
+              </div>
 
-          {/* Health Status filter + Generate PDF */}
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <label htmlFor="statusSelect">Health Status:</label>
-            <select
-              id="statusSelect"
-              className={styles.filterSelect}
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="ALL">All</option>
-              <option value="Normal">Normal</option>
-              <option value="Risk">Risk</option>
-              <option value="High Risk">High Risk</option>
-            </select>
-            <button
-              onClick={generatePdf}
-              style={{ background: "#27ae60", color: "#fff", padding: "6px 10px", borderRadius: "4px", border: "none", cursor: "pointer" }}
-            >
-              🡇 Generate Report
-            </button>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <label htmlFor="monthSelect">Select Month:</label>
+                <select
+                  id="monthSelect"
+                  className={styles.filterSelect}
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                >
+                  <option value="">All</option>
+                  {monthOrder.map((m) => (
+                    <option key={m} value={m}>
+                      {monthNames[m]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* RIGHT: Health Status + Generate (aligned like HealthStatus.js) */}
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <label htmlFor="statusSelect">Health Status:</label>
+                <select
+                  id="statusSelect"
+                  className={styles.filterSelect}
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                >
+                  <option value="ALL">All</option>
+                  <option value="Normal">Normal</option>
+                  <option value="Risk">Risk</option>
+                  <option value="High Risk">High Risk</option>
+                </select>
+              </div>
+
+              <button
+                onClick={generatePdf}
+                style={{
+                  background: "#27ae60",
+                  color: "#fff",
+                  padding: "8px 14px",
+                  borderRadius: "6px",
+                  border: "none",
+                  cursor: "pointer",
+                  fontWeight: "bold",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                🡇 Generate Report
+              </button>
+            </div>
           </div>
         </div>
 
+        {/* TABLE */}
         <table className={styles.table}>
           <thead>
             <tr>
@@ -258,6 +314,7 @@ const DueWeekReports = () => {
               <th>Health Status</th>
             </tr>
           </thead>
+
           <tbody>
             {filteredUsers.map((u, i) => (
               <tr key={u.id}>
@@ -268,7 +325,9 @@ const DueWeekReports = () => {
                 <td>{u.lmp}</td>
                 <td>{u.edc}</td>
                 <td>{u.weeks}</td>
-                <td style={{ fontWeight: "bold", color: getStatusColor(u.healthStatus) }}>{u.healthStatus}</td>
+                <td style={{ fontWeight: "bold", color: getStatusColor(u.healthStatus) }}>
+                  {u.healthStatus}
+                </td>
               </tr>
             ))}
           </tbody>

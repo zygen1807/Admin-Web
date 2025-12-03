@@ -1,0 +1,126 @@
+.about-section { 
+  padding: 28px; 
+  text-align: center; 
+  font-family: "Poppins", sans-serif;
+  background: #f9fafb;
+  color: #111827;
+}
+
+.home-header h1 { font-size: 40px; font-weight: 700; margin-bottom: 8px; }
+.highlight { color: #007e96; }
+.home-subtitle { color: #6b7280; font-size: 16px; margin-bottom: 24px; }
+
+
+
+/* ABOUT CARDS */
+.about-cards { display: flex; justify-content: center; gap: 18px; flex-wrap: wrap; margin-bottom: 40px; }
+.about-card { 
+  background: #fff; padding: 16px; border-radius: 12px; 
+  box-shadow: 0 6px 18px rgba(0,0,0,0.06); width: 220px; 
+  display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; 
+}
+.about-card img { width: 48px; height: 48px; }
+.about-card h3 { font-size: 16px; margin: 0; color: #007e96; }
+.about-card p { font-size: 13px; color: #6b7280; margin: 0; }
+
+/* SECTION HEADERS */
+.section-header { font-size: 26px; font-weight: 600; margin: 40px 0 18px; color: #111827; text-align: center; }
+.sub-header { font-size: 18px; font-weight: 600; margin: 24px 0 12px; color: #111827; text-align: center; }
+
+/* VISION & MISSION */
+.two-card-container { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; margin-bottom: 40px; }
+.two-card  {
+  background: #fff;
+  padding: 20px;
+  border-radius: 12px;
+
+  /* Added border */
+  border: 1px solid #c5c1c1;
+
+  width: 220px;
+
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.two-card img { width: 48px; height: 48px; }
+.two-card h3 { margin: 0; font-size: 16px; color: #007e96; }
+.two-card p { margin: 0; font-size: 14px; color: #6b7280; }
+
+/* CORE VALUES */
+.core-values-container { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; margin-bottom: 40px; }
+.core-value-card {
+  background: #fff;
+  padding: 20px;
+  border-radius: 12px;
+
+  /* Added border */
+  border: 1px solid #c5c1c1;
+
+  width: 220px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.core-value-card img { width: 48px; height: 48px; }
+.core-value-card h3 { font-size: 16px; margin: 0; color: #007e96; }
+.core-value-card p { font-size: 13px; color: #6b7280; margin: 0; }
+
+/* BARANGAY OFFICIALS */
+.official-cards-box { display: flex; justify-content: center; flex-wrap: wrap; gap: 18px; margin-bottom: 20px; }
+.official-card-box  {
+  background: #fff;
+  padding: 20px;
+  border-radius: 12px;
+
+  /* Added border */
+  border: 1px solid #c5c1c1;
+
+  width: 220px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.official-card-box img { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; }
+.official-card-box h4 { margin: 0; font-size: 15px; color: #007e96; text-align: center; }
+.official-card-box p { margin: 0; font-size: 13px; color: #6b7280; text-align: center; }
+/* Hover effect */
+.official-card-box:hover { border: 1px solid #60a5fa; }
+
+/* Responsive */
+@media (max-width: 980px) {
+  .about-cards, .two-card-container, .core-values-container, .official-cards-box { flex-direction: column; align-items: center; }
+}
+
+/* Vision & Mission Cards Hover */
+.two-card:hover {
+  border: 1px solid #60a5fa; /* light blue border on hover */
+
+}
+
+/* Core Values Cards Hover */
+.core-value-card:hover {
+  
+  border: 1px solid #60a5fa;
+  
+}
+
+/* Each major section spacing */
+.about-section > div,
+.about-section > .about-cards,
+.about-section > .two-card-container,
+.about-section > .core-values-container,
+.about-section > .official-cards-box {
+  margin-bottom: 100px; /* space after each section */
+}
+
+/* Optional: make last section smaller margin */
+.about-section > .official-cards-box:last-child {
+  margin-bottom: 40px;
+}

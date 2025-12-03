@@ -4,7 +4,8 @@ import {
   FaTachometerAlt,
   FaUsers,
   FaFileAlt,
-  FaUserPlus
+  FaUserPlus,
+  FaMapPin
 } from "react-icons/fa";
 import styles from "./Sidebar.module.css";
 import { auth } from "../firebase";
@@ -153,6 +154,11 @@ const Sidebar = ({ open }) => {
           <NavLink to="/app/AssignPregnantBhw" className={linkStyle}>
             <FaUserPlus className={styles.icon} />
             {open && <span className={styles.label}>Assign Pregnant</span>}
+          </NavLink>
+
+          <NavLink to="/app/locationmap" className={linkStyle}>
+            <FaMapPin className={styles.icon} />
+            {open && <span className={styles.label}>Location Map</span>}
           </NavLink>
 
           {/* User Management */}

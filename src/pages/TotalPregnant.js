@@ -5,6 +5,7 @@ import { db } from "../firebase";
 import styles from "./Reports.module.css";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { FaSearch } from "react-icons/fa";
 
 const monthOrder = ["01","02","03","04","05","06","07","08","09","10","11","12"];
 
@@ -26,6 +27,7 @@ const monthNames = {
 const TotalPregnant = () => {
   const [users, setUsers] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
 
   const formatDate = (date) => {
     if (!date) return "N/A";
@@ -73,8 +75,19 @@ const TotalPregnant = () => {
     return month === selectedMonth;
   });
 
+  // apply search filter after month filter
+  const displayedUsers = filteredUsers.filter((u) => {
+    const q = (searchTerm || "").trim().toLowerCase();
+    if (!q) return true;
+    return (
+      (u.name || "").toLowerCase().includes(q) ||
+      (u.address || "").toLowerCase().includes(q) ||
+      (u.phone || "").toLowerCase().includes(q)
+    );
+  });
+
   const generatePdf = () => {
-    if (filteredUsers.length === 0) return;
+    if (displayedUsers.length === 0) return;
 
     const doc = new jsPDF("landscape", "mm", "a4");
     const topMargin = 25.4; // 1 inch
@@ -91,7 +104,7 @@ const TotalPregnant = () => {
     const yearLabel = new Date().getFullYear();
     doc.text(`${monthLabel} ${yearLabel}`, pageWidth / 2, topMargin + 18, { align: "center" });
 
-    const tableData = filteredUsers.map((u, i) => [
+    const tableData = displayedUsers.map((u, i) => [
       i + 1,
       u.name,
       u.address,
@@ -136,26 +149,56 @@ const TotalPregnant = () => {
       <div className={styles.cardFull}>
         <h1>Total Pregnant Women</h1>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
-          <label htmlFor="monthSelect">Select Month:</label>
-          <select
-            id="monthSelect"
-            className={styles.filterSelect}
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(e.target.value)}
-          >
-            <option value="">All</option>
-            {monthOrder.map((m) => (
-              <option key={m} value={m}>{monthNames[m]}</option>
-            ))}
-          </select>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", marginBottom: "12px" }}>
+          {/* left group: Search + Month */}
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <div style={{ position: "relative" }}>
+              <input
+                type="text"
+                placeholder="Search name, address, phone..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{
+                  padding: "8px 32px 8px 12px",
+                  borderRadius: 8,
+                  border: "1px solid #d1d5db",
+                  width: 300,
+                }}
+              />
+              <FaSearch style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", color: "#64748b" }} />
+            </div>
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm("")}
+                style={{ padding: "6px 10px", borderRadius: 8, border: "none", background: "#efefef", cursor: "pointer" }}
+              >
+                Clear
+              </button>
+            )}
 
-          <button
-            onClick={generatePdf}
-            style={{ background: "#27ae60", color: "#fff", padding: "6px 10px", borderRadius: "4px", border: "none", cursor: "pointer" }}
-          >
-            🡇 Generate Report
-          </button>
+            <label htmlFor="monthSelect">Select Month:</label>
+            <select
+              id="monthSelect"
+              className={styles.filterSelect}
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+            >
+              <option value="">All</option>
+              {monthOrder.map((m) => (
+                <option key={m} value={m}>{monthNames[m]}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* right group: Generate button */}
+          <div>
+            <button
+              onClick={generatePdf}
+              style={{ background: "#27ae60", color: "#fff", padding: "6px 10px", borderRadius: "4px", border: "none", cursor: "pointer" }}
+            >
+              🡇 Generate Report
+            </button>
+          </div>
         </div>
 
         <table className={styles.table}>
@@ -171,21 +214,21 @@ const TotalPregnant = () => {
             </tr>
           </thead>
           <tbody>
-            {filteredUsers.map((u, i) => (
-              <tr key={u.id}>
-                <td>{i + 1}</td>
-                <td>{u.name}</td>
-                <td>{u.address}</td>
-                <td>{u.birthDate}</td>
-                <td>{u.age}</td>
-                <td>{u.phone}</td>
-                <td>{u.createdAt ? u.createdAt.toLocaleDateString() : "N/A"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+            {displayedUsers.map((u, i) => (
+               <tr key={u.id}>
+                 <td>{i + 1}</td>
+                 <td>{u.name}</td>
+                 <td>{u.address}</td>
+                 <td>{u.birthDate}</td>
+                 <td>{u.age}</td>
+                 <td>{u.phone}</td>
+                 <td>{u.createdAt ? u.createdAt.toLocaleDateString() : "N/A"}</td>
+               </tr>
+             ))}
+           </tbody>
+         </table>
 
-        {filteredUsers.length === 0 && <p style={{ textAlign: "center", marginTop: "20px" }}>No records found for the selected month.</p>}
+        {displayedUsers.length === 0 && <p style={{ textAlign: "center", marginTop: "20px" }}>No records found for the selected month & search.</p>}
       </div>
     </div>
   );

@@ -28,6 +28,9 @@ const Layout = () => {
   const [notifications, setNotifications] = useState([]);
   const [selectedNotif, setSelectedNotif] = useState(null);
 
+  // Logout confirmation modal state
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
@@ -43,6 +46,15 @@ const Layout = () => {
   const handleSettings = () => {
     navigate("/app/settings");
   }
+
+  // open logout modal instead of directly logging out
+  const handleLogoutClick = () => setShowLogoutModal(true);
+  const handleLogoutCancel = () => setShowLogoutModal(false);
+  const handleLogoutConfirm = () => {
+    setShowLogoutModal(false);
+    // call the existing logout logic
+    handleLogout();
+  };
   
 
   // 🔹 Detect click outside dropdown
@@ -202,7 +214,7 @@ const filteredNotifs =
                 <FaUserCircle className={styles.dropdownAvatarIcon} />
                 <p className={styles.dropdownName}>{adminName || "Admin"}</p>
               </div>
-              <button onClick={handleLogout} className={styles.dropdownItem}>
+              <button onClick={handleLogoutClick} className={styles.dropdownItem}>
                 <FaSignOutAlt style={{ marginRight: "8px" }} /> Logout
               </button>
               <button onClick={handleSettings} className={styles.dropdownItem}>
@@ -434,6 +446,24 @@ const filteredNotifs =
   )}
 </p>
 
+          </div>
+        </div>
+      )}
+
+      {/* Logout confirmation modal */}
+      {showLogoutModal && (
+        <div className={styles.logoutModalOverlay} role="dialog" aria-modal="true">
+          <div className={styles.logoutModal}>
+            <h3 className={styles.logoutModalTitle}>Confirm Logout</h3>
+            <p className={styles.logoutModalText}>Are you sure you want to sign out?</p>
+            <div className={styles.logoutButtonStack}>
+              <button className={styles.logoutConfirmBtn} onClick={handleLogoutConfirm}>
+                Logout
+              </button>
+              <button className={styles.logoutCancelBtn} onClick={handleLogoutCancel}>
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}
