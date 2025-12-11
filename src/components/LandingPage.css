@@ -50,6 +50,10 @@
   flex: 1;
   justify-content: center;
 }
+.desktop-nav .lp-nav-btn:hover {
+  background: #005f6a;
+  color: white;
+}
 
 .lp-nav-btn {
   padding: 8px 16px;
@@ -62,15 +66,18 @@
   color: #000;
 }
 
-.lp-nav-btn.active,
-.lp-nav-btn:hover {
+.lp-nav-btn.active{
   color: #007e96;
+}
+.lp-nav-btn:hover {
+  color: #ffffff;
 }
 
 /* RIGHT AUTH BUTTONS (Desktop) */
 .desktop-auth {
   display: flex;
   gap: 10px;
+  
 }
 
 /* Buttons */
@@ -81,7 +88,10 @@
   background: transparent;
   border-radius: 6px;
   cursor: pointer;
-
+}
+.lp-btn-out:hover {
+  background: #007e96;
+  color: white;
 }
 
 .lp-btn-fill {
@@ -91,6 +101,10 @@
   border-radius: 6px;
   border: none;
   cursor: pointer;
+}
+.lp-btn-fill:hover {
+  background: #005f6a;
+  color: white;
 }
 
 /* MOBILE MENU BUTTON */
@@ -151,7 +165,17 @@
   color: #007e96;
 }
 
-.drawer-login-btn,
+.drawer-login-btn{
+  width: 100%;
+  padding: 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #007e96;
+}
+.drawer-login-btn:hover {
+  background: #005f6a;
+  color: white;
+}
 .drawer-signup-btn {
   width: 100%;
   margin-top: 10px;
@@ -169,7 +193,9 @@
   background: #007e96;
   color: white;
 }
-
+.drawer-signup-btn:hover {
+  background: #005f6a;
+}
 /* HIDE DESKTOP ELEMENTS ON MOBILE */
 @media (max-width: 900px) {
   .desktop-nav,
@@ -180,6 +206,10 @@
   .lp-menu-btn {
     display: block;
   }
+}
+.lp-menu-btn:hover {
+  background: #005f6a;
+  color: white;
 }
 
 @media (min-width: 901px) {

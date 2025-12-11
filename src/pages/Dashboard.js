@@ -138,30 +138,37 @@ const [tableData, setTableData] = useState([]);
     { label: 'Delivered Pregnant Women', value: deliveredCount, icon: <FaBaby />, colorClass: styles.gradientPink },
   ];
 
-  const groupedBarData = {
-    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-    datasets: [
-      {
-        label: 'Pregnant Users',
-        data: allPregnantUsers.reduce((acc, user) => {
-          const month = user.createdAt?.getMonth() ?? 0;
-          acc[month] = (acc[month] || 0) + 1;
-          return acc;
-        }, new Array(12).fill(0)),
-        backgroundColor: 'rgba(59,130,246,0.8)',
-      },
-      {
-        label: 'Due Week Pregnant',
-        data: dueWeekPerMonth,
-        backgroundColor: 'rgba(253,224,71,0.8)',
-      },
-      {
-        label: 'Postpartum',
-        data: postpartumPerMonth,
-        backgroundColor: 'rgba(236,72,153,0.8)',
-      },
-    ],
-  };
+const groupedBarData = {
+  labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+  datasets: [
+    {
+      label: 'Pregnant Users',
+      data: allPregnantUsers.reduce((acc, user) => {
+        const month = user.createdAt?.getMonth() ?? 0;
+        acc[month] = (acc[month] || 0) + 1;
+        return acc;
+      }, new Array(12).fill(0)),
+      backgroundColor: 'rgba(59,130,246,0.8)',
+      barThickness: 30,         // 👈 MAKE BAR THICKER
+      maxBarThickness: 40,       // 👈 LIMIT
+    },
+    {
+      label: 'Due Week Pregnant',
+      data: dueWeekPerMonth,
+      backgroundColor: 'rgba(253,224,71,0.8)',
+      barThickness: 30,
+      maxBarThickness: 40,
+    },
+    {
+      label: 'Postpartum',
+      data: postpartumPerMonth,
+      backgroundColor: 'rgba(236,72,153,0.8)',
+      barThickness: 30,
+      maxBarThickness: 40,
+    },
+  ],
+};
+
 
   // ✅ Updated: Add datalabels above each bar
   const groupedBarOptions = {

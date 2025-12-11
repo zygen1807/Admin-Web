@@ -22,6 +22,7 @@ import TotalPregnant from "./pages/TotalPregnant";
 import LaborStatusReports from "./pages/LaborStatusReports";
 import SuperAdminPage from "./pages/SuperAdminPage";
 import SuperAdminLogin from "./pages/SuperAdminLogin";
+import EmergencyWatcher from "./pages/EmergencyWatcher";
 
 import Homes from "./components/Homes";
 import About from "./components/About";
@@ -68,6 +69,7 @@ function App() {
           <Route path="Developer" element={< Developer />} /> 
           <Route path="Services" element={< Services />} /> 
           <Route path="About" element={< About />} />  
+          <Route path="EmergencyWatcher" element={< EmergencyWatcher />} /> 
         </Route>
       </Routes>
     </Router>
