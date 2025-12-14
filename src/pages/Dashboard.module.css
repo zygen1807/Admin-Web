@@ -175,6 +175,19 @@
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
   transition: transform 0.2s ease, box-shadow 0.3s ease;
 }
+/* Dashboard.module.css */
+
+/* Pie chart specific card */
+.pieChartCard {
+  width: 400px;        /* adjust width as needed */
+  max-width: 100%;     /* responsive */
+  margin: 0 auto;      /* center horizontally */
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+  transition: transform 0.2s ease, box-shadow 0.3s ease;
+}
 
 .chartCard:hover {
   transform: translateY(-4px);

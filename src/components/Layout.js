@@ -90,7 +90,7 @@ const Layout = () => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
-          const docRef = doc(db, "admins", user.uid);
+          const docRef = doc(db, "admin_users", user.uid);
           const docSnap = await getDoc(docRef);
           if (docSnap.exists()) {
             setAdminName(docSnap.data().name);

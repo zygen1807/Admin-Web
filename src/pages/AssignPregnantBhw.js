@@ -12,6 +12,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase";
 import styles from "./AssignPregnantBhw.module.css";
+import { FaUserPlus, FaEye, FaTrash } from "react-icons/fa";
 
 const AssignPregnantBhw = () => {
   const [bhwList, setBhwList] = useState([]);
@@ -26,6 +27,8 @@ const AssignPregnantBhw = () => {
   const [loading, setLoading] = useState(true);
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
 const [pregToRemove, setPregToRemove] = useState(null);
+const [modalLoading, setModalLoading] = useState(false);
+const [availablePregnants, setAvailablePregnants] = useState([]);
 
 
   // Fetch all BHWs and Pregnant Users
@@ -69,28 +72,45 @@ const [pregToRemove, setPregToRemove] = useState(null);
   };
 
   // Open Add modal
-  const handleOpenAddModal = async (bhw) => {
-    setSelectedBhw(bhw);
-    const unassigned = await getUnassignedPregnants();
-    setPregnantList(unassigned);
-    setShowAddModal(true);
-  };
+const handleOpenAddModal = async (bhw) => {
+  setSelectedBhw(bhw);
+  setShowAddModal(true);
+  setModalLoading(true);
+
+  // clear old modal data
+  setAvailablePregnants([]);
+
+  // fetch unassigned
+  const unassigned = await getUnassignedPregnants();
+  setAvailablePregnants(unassigned);
+
+  setModalLoading(false);
+};
 
   // Open View Assigned modal
-  const handleOpenViewModal = async (bhw) => {
-    setSelectedBhw(bhw);
-    const patientsSnap = await getDocs(
-      collection(db, `bhw_patient_list/${bhw.id}/patients`)
-    );
-    const assigned = [];
-    for (const docSnap of patientsSnap.docs) {
-      const pregRef = doc(db, "pregnant_users", docSnap.id);
-      const pregData = await getDoc(pregRef);
-      if (pregData.exists()) assigned.push({ id: pregData.id, ...pregData.data() });
+const handleOpenViewModal = async (bhw) => {
+  setSelectedBhw(bhw);
+  setShowViewModal(true);     // ✅ open modal immediately
+  setModalLoading(true);      // ✅ show loading text
+
+  const patientsSnap = await getDocs(
+    collection(db, `bhw_patient_list/${bhw.id}/patients`)
+  );
+
+  const assigned = [];
+  for (const docSnap of patientsSnap.docs) {
+    const pregRef = doc(db, "pregnant_users", docSnap.id);
+    const pregData = await getDoc(pregRef);
+    if (pregData.exists()) {
+      assigned.push({ id: pregData.id, ...pregData.data() });
     }
-    setAssignedPregnants(assigned);
-    setShowViewModal(true);
-  };
+  }
+
+  setAssignedPregnants(assigned);
+  setModalLoading(false);     // ✅ hide loading text
+};
+
+
 
   // Confirm adding pregnant to bhw
   const handleAddPregnant = (preg) => {
@@ -203,9 +223,9 @@ const handleRemoveAssigned = async () => {
 
   if (loading) return <div className={styles.loading}>Loading...</div>;
 
-  const filteredPregnants = pregnantList.filter((p) =>
-    p.name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+const filteredPregnants = availablePregnants.filter((p) =>
+  p.name?.toLowerCase().includes(searchTerm.toLowerCase())
+);
 
   return (
     <div className={styles.container}>
@@ -229,17 +249,21 @@ const handleRemoveAssigned = async () => {
               <td>{bhw.assignedCount}</td>
               <td>
                 <button
-                  className={styles.assignButton}
-                  onClick={() => handleOpenAddModal(bhw)}
-                >
-                  Assign Pregnant
-                </button>
+  className={styles.assignButton}
+  onClick={() => handleOpenAddModal(bhw)}
+>
+  <FaUserPlus style={{ marginRight: 6 }} />
+  Assign Pregnant
+</button>
+
                 <button
-                  className={styles.viewButton}
-                  onClick={() => handleOpenViewModal(bhw)}
-                >
-                  View Assigned
-                </button>
+  className={styles.viewButton}
+  onClick={() => handleOpenViewModal(bhw)}
+>
+  <FaEye style={{ marginRight: 6 }} />
+  View Assigned
+</button>
+
               </td>
             </tr>
           ))}
@@ -262,24 +286,24 @@ const handleRemoveAssigned = async () => {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
 
-            <div className={styles.scrollArea}>
-              {filteredPregnants.map((preg) => (
-                <div key={preg.id} className={styles.assignedRow}>
-                  <span>{preg.name}</span>
-                  <button
-                    className={styles.saveButton}
-                    onClick={() => handleAddPregnant(preg)}
-                  >
-                    Add
-                  </button>
-                </div>
-              ))}
-              {filteredPregnants.length === 0 && (
-                <p style={{ textAlign: "center", color: "#888" }}>
-                  No available pregnant users
-                </p>
-              )}
-            </div>
+    {modalLoading ? (
+  <p style={{ textAlign: "center", color: "#888" }}>Loading...</p>
+) : filteredPregnants.length === 0 ? (
+  <p style={{ textAlign: "center", color: "#888" }}>No available pregnant users</p>
+) : (
+  filteredPregnants.map((preg) => (
+    <div key={preg.id} className={styles.assignedRow}>
+      <span>{preg.name}</span>
+      <button
+        className={styles.saveButton}
+        onClick={() => handleAddPregnant(preg)}
+      >
+        <FaUserPlus style={{ marginRight: 6 }} />
+        Add
+      </button>
+    </div>
+  ))
+)}
 
             <div className={styles.modalActions}>
               <button
@@ -301,27 +325,34 @@ const handleRemoveAssigned = async () => {
               Assigned to {selectedBhw.name}
             </h2>
             <div className={styles.scrollArea}>
-              {assignedPregnants.map((preg) => (
-                <div key={preg.id} className={styles.assignedRow}>
-                  <span>{preg.name}</span>
-                  <button
+  {modalLoading ? (
+    <p style={{ textAlign: "center", color: "#888" }}>Loading...</p>
+  ) : (
+    assignedPregnants.map((preg) => (
+      <div key={preg.id} className={styles.assignedRow}>
+        <span>{preg.name}</span>
+        <button
   className={styles.removeButton}
   onClick={() => {
-    setPregToRemove(preg); // store full data, not just ID
+    setPregToRemove(preg);
     setShowRemoveConfirm(true);
   }}
 >
+  <FaTrash style={{ marginRight: 6 }} />
   Remove
 </button>
 
-                </div>
-              ))}
-              {assignedPregnants.length === 0 && (
-                <p style={{ textAlign: "center", color: "#888" }}>
-                  No assigned pregnant users
-                </p>
-              )}
-            </div>
+      </div>
+    ))
+  )}
+
+  {!modalLoading && assignedPregnants.length === 0 && (
+    <p style={{ textAlign: "center", color: "#888" }}>
+      No assigned pregnant users
+    </p>
+  )}
+</div>
+
             <div className={styles.modalActions}>
               <button
                 className={styles.cancelButton}

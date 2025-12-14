@@ -653,17 +653,6 @@ const handleDelete = async (user) => {
     onClick={() => handleEdit(user)}
   />
 
-  <FaKey
-    style={{ cursor: "pointer", marginRight: "10px" , color: "#ebef9eff" }}
-    title="Password Recovery"
-     onClick={() => handleOpenPasswordModal(user)}
-  />
-
-  <FaTrash
-    style={{ cursor: "pointer", color: "#81888aff" }}
-    title="Delete"
-    onClick={() => handleDelete(user)}
-  />
               </td>
             </tr>
           ))}
@@ -720,17 +709,6 @@ const handleDelete = async (user) => {
     onClick={() => handleEdit(user)}
   />
 
-  <FaKey
-    style={{ cursor: "pointer", marginRight: "10px" , color: "#ebef9eff" }}
-    title="Password Recovery"
-     onClick={() => handleOpenPasswordModal(user)}
-  />
-
-  <FaTrash
-    style={{ cursor: "pointer", color: "#81888aff" }}
-    title="Delete"
-    onClick={() => handleDelete(user)}
-  />
               </td>
             </tr>
           ))}
@@ -787,17 +765,6 @@ const handleDelete = async (user) => {
     onClick={() => handleEdit(user)}
   />
 
-  <FaKey
-    style={{ cursor: "pointer", marginRight: "10px" , color: "#ebef9eff" }}
-    title="Password Recovery"
-     onClick={() => handleOpenPasswordModal(user)}
-  />
-
-  <FaTrash
-    style={{ cursor: "pointer", color: "#81888aff" }}
-    title="Delete"
-    onClick={() => handleDelete(user)}
-  />
               </td>
             </tr>
           ))}

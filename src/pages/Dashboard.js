@@ -409,7 +409,7 @@ const handleCardClick = async (label) => {
       <div className={styles.chartsSection}>
 
         {/* ✅ Pregnant Trimester Distribution */}
-        <div className={styles.chartCard}>
+        <div className={styles.pieChartCard}>
           <h2>Pregnant Trimester Distribution</h2>
           <div style={{ height: '300px' }}>
             <Doughnut data={doughnutData} options={doughnutOptions} />
