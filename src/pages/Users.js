@@ -3,6 +3,7 @@ import styles from "./Users.module.css";
 import { FaSearch, FaEdit, FaKey, FaTrash  } from "react-icons/fa";
 import {
   getDocs,
+  getDoc, 
   collection,
   doc,
   setDoc,
@@ -173,27 +174,44 @@ const formatBirthDate = (dateString) => {
 
   // --- Disable handler
   const handleDisable = async (user) => {
-    const confirm = window.confirm(`Disable ${user.name}?`);
-    if (!confirm) return;
+  const confirm = window.confirm(`Disable ${user.name}?`);
+  if (!confirm) return;
 
-    try {
-      // remove from active
-      await deleteDoc(doc(db, user.collection, user.id));
+  try {
+    // ✅ IF PREGNANT: MOVE trimester data to inactive
+    if (user.type === "Pregnant Women") {
+      const trimesterRef = doc(db, "pregnant_trimester", user.id);
+      const trimesterSnap = await getDoc(trimesterRef);
 
-      // add to respective inactive
-      let inactiveCol = "";
-      if (user.type === "Pregnant Women") inactiveCol = "pregnant_inactive";
-      if (user.type === "BHW") inactiveCol = "bhw_inactive";
-      if (user.type === "Barangay Rescuer") inactiveCol = "rescuer_inactive";
+      if (trimesterSnap.exists()) {
+        await setDoc(
+          doc(db, "pregnant_trimester_inactive", user.id),
+          trimesterSnap.data()
+        );
 
-      await setDoc(doc(collection(db, inactiveCol), user.id), user);
-
-      alert(`${user.name} disabled successfully.`);
-      fetchUsers();
-    } catch (error) {
-      console.error("Disable Error:", error);
+        await deleteDoc(trimesterRef);
+      }
     }
-  };
+
+    // ✅ Remove from active users
+    await deleteDoc(doc(db, user.collection, user.id));
+
+    // ✅ Add to inactive users
+    let inactiveCol = "";
+    if (user.type === "Pregnant Women") inactiveCol = "pregnant_inactive";
+    if (user.type === "BHW") inactiveCol = "bhw_inactive";
+    if (user.type === "Barangay Rescuer") inactiveCol = "rescuer_inactive";
+
+    await setDoc(doc(db, inactiveCol, user.id), user);
+
+    alert(`${user.name} disabled successfully.`);
+    fetchUsers();
+  } catch (error) {
+    console.error("Disable Error:", error);
+    alert("Failed to disable user.");
+  }
+};
+
 
   // --- Enable handler
   const handleEnable = (user, type) => {
@@ -318,6 +336,27 @@ if (isEnabling && selectedUser) {
     // Move from inactive → active collection
     await deleteDoc(doc(db, inactiveCol, selectedUser.id));
     await setDoc(doc(db, activeCol, selectedUser.id), updatedUser);
+
+    // ✅ RESTORE trimester data IF pregnant
+if (userType === "Pregnant Women") {
+  const inactiveTrimesterRef = doc(
+    db,
+    "pregnant_trimester_inactive",
+    selectedUser.id
+  );
+
+  const inactiveTrimesterSnap = await getDoc(inactiveTrimesterRef);
+
+  if (inactiveTrimesterSnap.exists()) {
+    await setDoc(
+      doc(db, "pregnant_trimester", selectedUser.id),
+      inactiveTrimesterSnap.data()
+    );
+
+    await deleteDoc(inactiveTrimesterRef);
+  }
+}
+
 
     // ✅ Reset old checkup records
     try {

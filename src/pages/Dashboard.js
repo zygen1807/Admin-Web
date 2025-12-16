@@ -1,7 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { FaUser, FaUserSlash, FaClock, FaBaby } from 'react-icons/fa';
 import styles from './Dashboard.module.css';
-import { getDocs, collection, query, where } from 'firebase/firestore';
+import {
+  getDocs,
+  getDoc,
+  collection,
+  doc,
+  query,
+  where
+} from 'firebase/firestore';
+
 import { db } from '../firebase';
 
 import { Bar, Doughnut, Line } from 'react-chartjs-2';
@@ -41,6 +49,32 @@ const formatDate = (date) => {
   });
 };
 
+const isWithinDueWeek = (edc) => {
+  if (!edc) return false;
+
+  let edcDate;
+  if (edc instanceof Date) {
+    edcDate = edc;
+  } else if (edc.toDate) {
+    edcDate = edc.toDate();
+  } else {
+    edcDate = new Date(edc); // fallback for string dates
+  }
+
+  if (isNaN(edcDate.getTime())) return false;
+
+  const today = new Date();
+  // Zero out the time portion for accurate day comparison
+  today.setHours(0, 0, 0, 0);
+  edcDate.setHours(0, 0, 0, 0);
+
+  const diffInMs = edcDate.getTime() - today.getTime();
+  const diffInDays = Math.round(diffInMs / (1000 * 60 * 60 * 24));
+
+  // ✅ Due week = 0 to 7 days before EDC
+  return diffInDays >= 0 && diffInDays <= 7;
+};
+
 
 const Dashboard = () => {
   const [pregnantUsersCount, setPregnantUsersCount] = useState(0);
@@ -70,9 +104,14 @@ const [tableData, setTableData] = useState([]);
         const inactiveSnap = await getDocs(collection(db, 'pregnant_inactive'));
         setInactiveCount(inactiveSnap.size);
 
-        const dueWeekQuery = query(collection(db, 'pregnant_trimester'), where('weeks', '>=', 36));
-        const dueWeekSnap = await getDocs(dueWeekQuery);
-        setDueWeekCount(dueWeekSnap.size);
+        const trimesterSnap = await getDocs(collection(db, 'pregnant_trimester'));
+
+const dueWeekDocs = trimesterSnap.docs.filter(doc => {
+  const edc = doc.data().edc;
+  return isWithinDueWeek(edc);
+});
+
+setDueWeekCount(dueWeekDocs.length);
 
         const deliveredSnap = await getDocs(collection(db, 'done_pregnants'));
         setDeliveredCount(deliveredSnap.size);
@@ -96,16 +135,21 @@ const [tableData, setTableData] = useState([]);
         });
         setFilteredTrimesterData(trimesterCounts);
 
-        // Calculate Due Week Pregnant per month
-        let dueMonthCounts = new Array(12).fill(0);
-        dueWeekSnap.forEach(doc => {
-          const createdAt = doc.data().updatedAt?.toDate?.();
-          if (createdAt) {
-            const month = createdAt.getMonth();
-            dueMonthCounts[month] += 1;
-          }
-        });
-        setDueWeekPerMonth(dueMonthCounts);
+     // ✅ Calculate Due Week Pregnant per month (EDC-based)
+let dueMonthCounts = new Array(12).fill(0);
+
+trimesterSnap.docs
+  .filter(doc => isWithinDueWeek(doc.data().edc))
+  .forEach(doc => {
+    const updatedAt = doc.data().updatedAt?.toDate?.();
+    if (updatedAt) {
+      const month = updatedAt.getMonth();
+      dueMonthCounts[month] += 1;
+    }
+  });
+
+setDueWeekPerMonth(dueMonthCounts);
+
 
         // Calculate Postpartum per month
         let postpartumMonthCounts = new Array(12).fill(0);
@@ -265,7 +309,21 @@ const handleCardClick = async (label) => {
   if (!collectionName) return;
 
   try {
-    const snap = await getDocs(collection(db, collectionName));
+   let snap;
+
+if (label === 'Pregnant Women in Due Week') {
+ const trimesterSnap = await getDocs(collection(db, 'pregnant_trimester'));
+
+snap = {
+  docs: trimesterSnap.docs.filter(doc =>
+    isWithinDueWeek(doc.data().edc)
+  )
+};
+
+} else {
+  snap = await getDocs(collection(db, collectionName));
+}
+
     const list = await Promise.all(
       snap.docs.map(async (docItem) => {
         const data = docItem.data();
@@ -273,19 +331,22 @@ const handleCardClick = async (label) => {
         // Always fetch the pregnant_users record if not coming from there
         let userData = {};
         if (collectionName !== 'pregnant_users') {
-          const userSnap = await getDocs(
-            query(collection(db, 'pregnant_users'), where('id', '==', docItem.id))
-          );
-          if (!userSnap.empty) {
-            userData = userSnap.docs[0].data();
-          }
+         const userSnap = await getDoc(
+  doc(db, 'pregnant_users', data.patientId || docItem.id)
+);
+
+if (userSnap.exists()) {
+  userData = userSnap.data();
+}
+
         } else {
           userData = data;
         }
 
         // Fetch trimester data if exists
-        let lmp = data.lmp || userData.lmp || null;
-        let edc = data.edc || userData.edc || null;
+      let lmp = data.lmp ?? userData.lmp ?? null;
+let edc = data.edc ?? userData.edc ?? null;
+
 
         if (!lmp || !edc) {
           const trimesterSnap = await getDocs(
