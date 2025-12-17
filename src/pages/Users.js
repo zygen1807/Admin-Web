@@ -173,7 +173,7 @@ const formatBirthDate = (dateString) => {
   });
 
   // --- Disable handler
-  const handleDisable = async (user) => {
+const handleDisable = async (user) => {
   const confirm = window.confirm(`Disable ${user.name}?`);
   if (!confirm) return;
 
@@ -191,6 +191,19 @@ const formatBirthDate = (dateString) => {
 
         await deleteDoc(trimesterRef);
       }
+
+      // ✅ ALSO DELETE RELATED COLLECTIONS IF THEY EXIST
+      const donePregnantRef = doc(db, "done_pregnants", user.id);
+      const doneSnap = await getDoc(donePregnantRef);
+      if (doneSnap.exists()) await deleteDoc(donePregnantRef);
+
+      const locationRef = doc(db, "pregnant_locations", user.id);
+      const locationSnap = await getDoc(locationRef);
+      if (locationSnap.exists()) await deleteDoc(locationRef);
+
+      const statusRef = doc(db, "pregnant_status", user.id);
+      const statusSnap = await getDoc(statusRef);
+      if (statusSnap.exists()) await deleteDoc(statusRef);
     }
 
     // ✅ Remove from active users

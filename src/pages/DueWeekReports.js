@@ -53,65 +53,107 @@ const DueWeekReports = () => {
     });
   };
 
-  useEffect(() => {
-    const fetchDueWeekUsers = async () => {
-      try {
-        const list = [];
-        const dueWeekQuery = query(
-          collection(db, "pregnant_trimester"),
-          where("weeks", ">=", 36)
-        );
-        const dueWeekSnap = await getDocs(dueWeekQuery);
+useEffect(() => {
+  const isWithinDueWeek = (edc) => {
+    if (!edc) return false;
+    const dueDate = edc.toDate ? edc.toDate() : new Date(edc);
 
-        for (let docSnap of dueWeekSnap.docs) {
-          const trimester = docSnap.data();
-          const userId = trimester.patientId;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-          // Fetch user info
-          const userDoc = await getDocs(
-            query(collection(db, "pregnant_users"), where("__name__", "==", userId))
-          );
-          const user = userDoc.docs[0]?.data();
-          if (!user) continue;
+    const end = new Date(today);
+    end.setDate(end.getDate() + 7);
 
-          // Fetch latest checkup
-          const checkupSnap = await getDocs(
+    return dueDate >= today && dueDate <= end;
+  };
+
+  const fetchDueWeekUsers = async () => {
+    try {
+      // 1️⃣ Fetch ALL trimester records ONCE
+      const trimesterSnap = await getDocs(
+        collection(db, "pregnant_trimester")
+      );
+
+      // 2️⃣ Filter due-week by EDC (same as dashboard)
+      const dueWeekDocs = trimesterSnap.docs.filter(doc =>
+        isWithinDueWeek(doc.data().edc)
+      );
+
+      if (dueWeekDocs.length === 0) {
+        setUsers([]);
+        return;
+      }
+
+      const patientIds = dueWeekDocs.map(d => d.data().patientId);
+
+      // 3️⃣ Fetch users in parallel
+      const userSnaps = await Promise.all(
+        patientIds.map(id =>
+          getDocs(
             query(
-              collection(db, "checkup_record", userId, "records"),
+              collection(db, "pregnant_users"),
+              where("__name__", "==", id)
+            )
+          )
+        )
+      );
+
+      const userMap = new Map();
+      userSnaps.forEach(snap => {
+        if (!snap.empty) {
+          userMap.set(snap.docs[0].id, snap.docs[0].data());
+        }
+      });
+
+      // 4️⃣ Fetch latest checkup in parallel
+      const checkupSnaps = await Promise.all(
+        patientIds.map(id =>
+          getDocs(
+            query(
+              collection(db, "checkup_record", id, "records"),
               orderBy("date", "desc"),
               limit(1)
             )
-          );
-          const checkup = checkupSnap.docs[0]?.data();
-          const healthStatus = checkup?.riskAssessment || "Normal";
+          )
+        )
+      );
 
-          const latestUpdate = trimester.updatedAt
-            ? typeof trimester.updatedAt.toDate === "function"
-              ? trimester.updatedAt.toDate()
-              : new Date(trimester.updatedAt)
-            : null;
+      const checkupMap = new Map();
+      checkupSnaps.forEach((snap, index) => {
+        checkupMap.set(
+          patientIds[index],
+          snap.docs[0]?.data()?.riskAssessment || "Normal"
+        );
+      });
 
-          list.push({
-            id: userId,
-            name: user.name || "—",
-            address: user.address || "—",
-            phone: user.phone || "—",
-            lmp: trimester.lmp ? formatDate(trimester.lmp) : "N/A",
-            edc: trimester.edc ? formatDate(trimester.edc) : "N/A",
-            weeks: trimester.weeks || 0,
-            latestUpdate,
-            healthStatus,
-          });
-        }
+      // 5️⃣ Build final list
+      const list = dueWeekDocs.map(docSnap => {
+        const trimester = docSnap.data();
+        const uid = trimester.patientId;
+        const user = userMap.get(uid);
+        if (!user) return null;
 
-        setUsers(list);
-      } catch (err) {
-        console.error("Error fetching due week users:", err);
-      }
-    };
+        return {
+          id: uid,
+          name: user.name || "—",
+          address: user.address || "—",
+          phone: user.phone || "—",
+          lmp: formatDate(trimester.lmp),
+          edc: formatDate(trimester.edc),
+          weeks: trimester.weeks || 0,
+          latestUpdate: trimester.updatedAt?.toDate?.() || null,
+          healthStatus: checkupMap.get(uid) || "Normal",
+        };
+      }).filter(Boolean);
 
-    fetchDueWeekUsers();
-  }, []);
+      setUsers(list);
+    } catch (err) {
+      console.error("Error fetching due week users:", err);
+    }
+  };
+
+  fetchDueWeekUsers();
+}, []);
 
   // ➤ APPLY FILTERS
   const filteredUsers = users

@@ -52,58 +52,61 @@ const DeliveredReports = () => {
     });
   };
 
-  useEffect(() => {
-    const fetchDelivered = async () => {
-      try {
-        const deliveredSnap = await getDocs(collection(db, "done_pregnants"));
-        const list = [];
+useEffect(() => {
+  const fetchDelivered = async () => {
+    try {
+      // 1️⃣ Fetch base collections in parallel
+      const [deliveredSnap, usersSnap, trimesterSnap] = await Promise.all([
+        getDocs(collection(db, "done_pregnants")),
+        getDocs(collection(db, "pregnant_users")),
+        getDocs(collection(db, "pregnant_trimester")),
+      ]);
 
-        for (let docSnap of deliveredSnap.docs) {
-          const user = { id: docSnap.id, ...docSnap.data() };
+      // 2️⃣ Build lookup maps
+      const userMap = new Map();
+      usersSnap.docs.forEach(d => userMap.set(d.id, d.data()));
 
-          const userDoc = await getDoc(doc(db, "pregnant_users", user.id));
-          const userData = userDoc.exists() ? userDoc.data() : {};
+      const trimesterMap = new Map();
+      trimesterSnap.docs.forEach(d => {
+        const t = d.data();
+        if (t.patientId) trimesterMap.set(t.patientId, t);
+      });
 
-          const trimesterSnap = await getDocs(
-            query(
-              collection(db, "pregnant_trimester"),
-              where("patientId", "==", user.id)
-            )
-          );
-          const trimesterData = trimesterSnap.docs[0]?.data();
+      // 3️⃣ Build final list (NO awaits in loop)
+      const list = deliveredSnap.docs.map(docSnap => {
+        const delivered = docSnap.data();
+        const uid = docSnap.id;
 
-          list.push({
-            id: user.id,
-            name: userData.name || "—",
-            address: userData.address || "—",
-            birthDate: formatDate(userData.birthDate),
-            age: userData.age || "—",
-            phone: userData.phone || "—",
-            lmp: userData.lmp ? formatDate(userData.lmp) : "N/A",
-            edc: trimesterData?.edc ? formatDate(trimesterData.edc) : "N/A",
-            centerName: user.center_name || "—",
-            deliveredAt: user.deliveredAt
-              ? formatDate(
-                  user.deliveredAt?.toDate
-                    ? user.deliveredAt.toDate()
-                    : user.deliveredAt
-                )
-              : "N/A",
-            deliveredAtRaw:
-              user.deliveredAt?.toDate?.() ??
-              new Date(user.deliveredAt) ??
-              null,
-          });
-        }
+        const userData = userMap.get(uid) || {};
+        const trimesterData = trimesterMap.get(uid);
 
-        setDeliveredUsers(list);
-      } catch (err) {
-        console.error("Error loading delivered list:", err);
-      }
-    };
+        const deliveredRaw =
+          delivered.deliveredAt?.toDate?.() ??
+          (delivered.deliveredAt ? new Date(delivered.deliveredAt) : null);
 
-    fetchDelivered();
-  }, []);
+        return {
+          id: uid,
+          name: userData.name || "—",
+          address: userData.address || "—",
+          birthDate: formatDate(userData.birthDate),
+          age: userData.age || "—",
+          phone: userData.phone || "—",
+          lmp: userData.lmp ? formatDate(userData.lmp) : "N/A",
+          edc: trimesterData?.edc ? formatDate(trimesterData.edc) : "N/A",
+          centerName: delivered.center_name || "—",
+          deliveredAt: deliveredRaw ? formatDate(deliveredRaw) : "N/A",
+          deliveredAtRaw: deliveredRaw,
+        };
+      });
+
+      setDeliveredUsers(list);
+    } catch (err) {
+      console.error("Error loading delivered list:", err);
+    }
+  };
+
+  fetchDelivered();
+}, []);
 
   const filteredDelivered = deliveredUsers.filter((u) => {
     if (!selectedMonth) return true;

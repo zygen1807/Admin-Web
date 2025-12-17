@@ -53,66 +53,73 @@ const HealthStatus = () => {
     });
   };
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const list = [];
-        const snap = await getDocs(collection(db, "pregnant_users"));
+ useEffect(() => {
+  const fetchData = async () => {
+    try {
+      // 1️⃣ Fetch ALL collections in parallel
+      const [usersSnap, trimesterSnap] = await Promise.all([
+        getDocs(collection(db, "pregnant_users")),
+        getDocs(collection(db, "pregnant_trimester")),
+      ]);
 
-        for (let docSnap of snap.docs) {
-          const user = { id: docSnap.id, ...docSnap.data() };
+      // 2️⃣ Build trimester map (patientId → trimester)
+      const trimesterMap = new Map();
+      trimesterSnap.docs.forEach(d => {
+        const t = d.data();
+        if (t.patientId) trimesterMap.set(t.patientId, t);
+      });
 
-          // fetch trimester info
-          const trimesterSnap = await getDocs(
+      // 3️⃣ Fetch ALL latest checkups in parallel
+      const checkupSnaps = await Promise.all(
+        usersSnap.docs.map(doc =>
+          getDocs(
             query(
-              collection(db, "pregnant_trimester"),
-              where("patientId", "==", user.id)
-            )
-          );
-          const trimester = trimesterSnap.docs[0]?.data();
-
-          // fetch latest checkup record
-          const checkupSnap = await getDocs(
-            query(
-              collection(db, "checkup_record", user.id, "records"),
+              collection(db, "checkup_record", doc.id, "records"),
               orderBy("date", "desc"),
               limit(1)
             )
-          );
+          )
+        )
+      );
 
-          const checkup = checkupSnap.docs[0]?.data();
+      const list = usersSnap.docs.map((docSnap, index) => {
+        const user = docSnap.data();
+        const uid = docSnap.id;
 
-          let latestCheckupDate = null;
-          if (checkup?.date) {
-            latestCheckupDate =
-              typeof checkup.date.toDate === "function"
-                ? checkup.date.toDate()
-                : new Date(checkup.date);
-          }
+        const trimester = trimesterMap.get(uid);
+        const checkup = checkupSnaps[index]?.docs[0]?.data();
 
-          list.push({
-            id: user.id,
-            name: user.name || "—",
-            address: user.address || "—",
-            birthDate: formatDate(user.birthDate),
-            age: user.age || "—",
-            phone: user.phone || "—",
-            lmp: trimester?.lmp ? formatDate(trimester.lmp) : "N/A",
-            edc: trimester?.edc ? formatDate(trimester.edc) : "N/A",
-            riskFactor: checkup?.riskFactor || "—",
-            healthStatus: checkup?.riskAssessment || "Normal",
-            latestCheckupDate,
-          });
+        let latestCheckupDate = null;
+        if (checkup?.date) {
+          latestCheckupDate =
+            typeof checkup.date.toDate === "function"
+              ? checkup.date.toDate()
+              : new Date(checkup.date);
         }
 
-        setUsers(list);
-      } catch (err) {
-        console.error("Error loading HealthStatus data:", err);
-      }
-    };
+        return {
+          id: uid,
+          name: user.name || "—",
+          address: user.address || "—",
+          birthDate: formatDate(user.birthDate),
+          age: user.age || "—",
+          phone: user.phone || "—",
+          lmp: trimester?.lmp ? formatDate(trimester.lmp) : "N/A",
+          edc: trimester?.edc ? formatDate(trimester.edc) : "N/A",
+          riskFactor: checkup?.riskFactor || "—",
+          healthStatus: checkup?.riskAssessment || "Normal",
+          latestCheckupDate,
+        };
+      });
 
-    fetchData();
-  }, []);
+      setUsers(list);
+    } catch (err) {
+      console.error("Error loading HealthStatus data:", err);
+    }
+  };
+
+  fetchData();
+}, []);
 
   const filteredUsers = users.filter((u) => {
     if (selectedMonth) {

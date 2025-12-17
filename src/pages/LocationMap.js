@@ -244,6 +244,10 @@ export default function LocationMap() {
     }
   });
 
+  // ✅ SORT: Newest → Oldest
+recentList.sort((a, b) => b.timestamp - a.timestamp);
+
+
   // Auto-open emergency modal when locations change (show latest emergency)
   useEffect(() => {
     // compute emergencyList on locations change (we already computed above each render)
